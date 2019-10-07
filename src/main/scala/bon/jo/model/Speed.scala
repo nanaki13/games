@@ -1,6 +1,6 @@
-package model
+package bon.jo.model
 
-import model.Model.{Direction, Pos}
+import bon.jo.model.Model.{Direction, Pos}
 
 object Speed {
   def apply(x: Int, y: Int): Speed = {

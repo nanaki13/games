@@ -1,8 +1,8 @@
-package model
+package bon.jo.model
 
 import java.awt.Color
 
-import model.Model.{BaseModel, Direction, ModelElement}
+import bon.jo.model.Model.{BaseModel, Direction, ModelElement}
 
 import scala.collection.mutable.ListBuffer
 

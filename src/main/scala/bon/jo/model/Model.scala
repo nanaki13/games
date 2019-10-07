@@ -1,9 +1,10 @@
-package model
+package bon.jo.model
 
 import java.awt.Color
 
-import model.Animation.{AnimationProp, DieWithCount}
-import model.Model.{BaseModel, ModelElement}
+import bon.jo.conf.Conf
+import bon.jo.model.Animation.{AnimationProp, DieWithCount}
+import bon.jo.model.Model.{BaseModel, ModelElement}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer

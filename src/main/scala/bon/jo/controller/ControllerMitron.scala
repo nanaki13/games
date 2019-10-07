@@ -1,17 +1,19 @@
-package model
+package bon.jo.controller
 
 import java.io._
 
-import model.Model.{player1, _}
-import model.Shape.ComposedShape
-import model.Shapes.ShapeParamMultiple
-import model.Speed.builder
+import bon.jo.conf.{Conf, ConfDefault}
+import bon.jo.model.Model._
+import bon.jo.model.Shape.ComposedShape
+import bon.jo.model.Shapes.ShapeParamMultiple
+import bon.jo.model._
+import bon.jo.view.View
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
-trait ControllerMitron extends Controller {
+trait ControllerMitron extends Controller[MitronAthParam] {
 
 
   override val model = Model.Test
@@ -21,7 +23,7 @@ trait ControllerMitron extends Controller {
   private var _score = 0
   private var _cnt = 1
   private var _bulletCnt = Conf.nbBullet
-  override var view: View[_] = null
+  override var view: View[_,MitronAthParam] = null
 
   val sourceIndex = 1
 
@@ -57,8 +59,9 @@ trait ControllerMitron extends Controller {
 
   }
 
+
   def notifyViewATH = {
-    view.score(_score, maxScore, _bulletCnt)
+    view.arhParam = MitronAthParam(_score, maxScore, _bulletCnt)
   }
 
   def nbJ = _nbJ
@@ -318,4 +321,3 @@ trait ControllerMitron extends Controller {
 
 
 }
-
