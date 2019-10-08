@@ -1,6 +1,6 @@
 package bon.jo.view
 
-import java.awt.event.KeyListener
+import java.awt.event.{KeyEvent, KeyListener}
 import java.awt.geom.{Ellipse2D, Rectangle2D}
 import java.awt.{BorderLayout, Color, Component, Graphics2D, Image}
 
@@ -11,13 +11,16 @@ import bon.jo.model.Shape.{Circle, ComposedShape, Point, Rectangle}
 import bon.jo.model.Shapes.{DirAndIdParam, ShapeParamMultiple, ShapeParamOne, ShapeParamTwo}
 import javax.swing.{JFrame, JPanel, WindowConstants}
 
-trait AwtView[AthParam_ <: AthParam] extends View[Graphics2D, AthParam_] with KeyListener{
+trait AwtView[AthParam_ <: AthParam] extends View[Graphics2D, AthParam_] with KeyListener {
   this: Component =>
   val frame = new JFrame(name)
   val borderLayout: BorderLayout = new BorderLayout
   val root: JPanel = new JPanel(borderLayout)
-  def name : String
+
+  def name: String
+
   def image: Image
+
   override def init(): Unit = {
     root.add(this)
     root.addKeyListener(this)
@@ -29,14 +32,42 @@ trait AwtView[AthParam_ <: AthParam] extends View[Graphics2D, AthParam_] with Ke
     frame.pack()
     root.requestFocus()
   }
+
   override def refresh = {
     root.invalidate()
     root.repaint()
   }
 
+  val userIn = new StringBuilder
+  var register = false
+
+  def getLoserUserName: Unit = {
+    register = true
+    userIn.setLength(0)
+  }
+
+   def _keyTyped(e: KeyEvent): Unit = {
+
+    if (register) {
+      register = !(e.getKeyCode == 10)
+      if(register){
+        if(e.getKeyCode!=8){
+          userIn.append(e.getKeyChar)
+        }else if (!userIn.isEmpty){
+          userIn.setLength(userIn.length()-1)
+        }
+      }else{
+        controller.userName = userIn.toString()
+      }
+    }
+
+
+  }
+
   def drawImage(e: ModelElement, pa: DirAndIdParam)(implicit g2d: Graphics2D)
 
   def draw(e: ModelElement)(implicit g2: Graphics2D, offX: Pos): Unit = {
+
     g2.setColor(e.awtColor)
     e match {
       case PlateauBase => g2.draw(new Rectangle2D.Double(PlateauBase.x, PlateauBase.y, PlateauBase.w, PlateauBase.h))
@@ -44,10 +75,10 @@ trait AwtView[AthParam_ <: AthParam] extends View[Graphics2D, AthParam_] with Ke
         case i: Int => g2.fill(new Rectangle2D.Double(p.x + offX.x - i / 2d, p.y + offX.y - i / 2d, i, i))
       }
       case BaseModel(p, Shape(Rectangle, pa: ShapeParamTwo), _, _, _) => g2.fill(new Rectangle2D.Double(p.x + offX.x - pa.x / 2d, p.y + offX.y - pa.y / 2d, pa.x, pa.y))
-      case BaseModel(p, Shape(Circle, pa: ShapeParamOne[_]), _, _, _)=> pa.x match {
+      case BaseModel(p, Shape(Circle, pa: ShapeParamOne[_]), _, _, _) => pa.x match {
         case int: Int => {
           val d = 2 * int
-          g2.fill(new Ellipse2D.Double(p.x + offX.x - int, p.y + offX.y -int, d, d))
+          g2.fill(new Ellipse2D.Double(p.x + offX.x - int, p.y + offX.y - int, d, d))
         }
       }
       case BaseModel(p, Shape(Shape.Image, pa: DirAndIdParam), _, _, _) => {
@@ -91,6 +122,7 @@ trait AwtView[AthParam_ <: AthParam] extends View[Graphics2D, AthParam_] with Ke
       g2.drawOval(e.x, e.y, 3, 3)
     }
   }
+
   override def newGame: Unit = {
 
     root.requestFocus()

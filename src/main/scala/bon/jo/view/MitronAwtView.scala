@@ -1,12 +1,12 @@
 package bon.jo.view
 
 
-import java.awt.{BorderLayout, Color, Dimension, FlowLayout, Font, Graphics, Graphics2D}
+import java.awt.{BorderLayout, Color, Dimension, FlowLayout, Font, Graphics, Graphics2D, Paint}
 import java.awt.event.{KeyEvent, KeyListener}
 import java.awt.geom.{AffineTransform, Ellipse2D, Rectangle2D}
 
 import bon.jo.conf.Conf
-import bon.jo.controller.ControllerMitron
+import bon.jo.controller.{ControllerMitron, Score}
 import bon.jo.model.{MitronAthParam, Model}
 import bon.jo.model.Model._
 import bon.jo.model.Shape
@@ -29,7 +29,7 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
   val user2 = ImageIO.read(getClass.getResourceAsStream("/Ships/Turtle.png"))
   val item = ImageIO.read(getClass.getResourceAsStream("/box/box.png"))
   val deltaStart = BasePos(-1, 1)
-  var _athParam: MitronAthParam = MitronAthParam(0, 0, 0)
+  var _athParam: MitronAthParam = MitronAthParam.None
 
 
   def arhParam_=(arhParam: MitronAthParam) = {
@@ -114,6 +114,8 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     }
   }
 
+  def randomColor: Paint = new Color(Random.nextFloat(),Random.nextFloat(),Random.nextFloat())
+
   override def paint(g: Graphics): Unit = { //custom color
     //create new Graphics2D instance using Graphics parent
 
@@ -136,7 +138,11 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
 
     g2.setPaint(Color.white)
     ff = ff.map(stars)
-    ff.foreach(p => g2.drawOval(p.x, p.y, 2, 2))
+    ff.foreach(p => {
+      if(register){
+        g2.setPaint(randomColor)
+      }
+      g2.drawOval(p.x, p.y, 2, 2)})
     val _a = (PlateauBase.w / 1.5).toFloat
     val _b = PlateauBase.h.toFloat
     val a = _a * cntPlanetGrow / (1000f)
@@ -162,17 +168,31 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
       gameOver(g2, offX = offset_)
     }
 
+    if(register){
+      val str = userIn.toString()
+      g2.setPaint(defTexColor)
+      g2.drawString("Enter your name : "+str,200,200)
+      val l = controller.scores.scores.sorted.reverse
+      val fullsize = l.size
+      val brn = if( fullsize > 10 ) 10  else fullsize
+      for(i <-1 to brn){
+        g2.drawString(l(i).tuUiString,200,250+i*20)
+      }
+    }
+
 
   }
 
   private var cntPlanetGrow: Float = 0
 
+  type View = AwtView[MitronAthParam]
   override def keyTyped(e: KeyEvent): Unit = {
 
 
   }
 
   override def keyPressed(e: KeyEvent): Unit = {
+
     e.getKeyCode match {
       case 40 => controller.userWant(Direction.down)
       case 38 => controller.userWant(Direction.up)
@@ -188,6 +208,7 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
   }
 
   override def keyReleased(e: KeyEvent): Unit = {
+
     e.getKeyCode match {
       case 40 => controller.userWant(Direction.none)
       case 38 => controller.userWant(Direction.none)
@@ -201,21 +222,26 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
       case 16 => controller.userWantShowt()
       case 32 => controller.userWantShowt2()
 
-      case e => println(s"${e} not mapped")
+      case ee =>{
+        println(s"${ee} not mapped")
+        _keyTyped(e)
+        _athParam = _athParam.copy(maxScore = _athParam.score.copy(who = List(userIn.toString())))
+      }
+
     }
 
   }
 
 
-
+  val defTexColor: Paint = Color.magenta
 
   def drawScore(implicit g2: Graphics2D): Unit = {
-    g2.setPaint(Color.magenta)
+    g2.setPaint(defTexColor)
     val fonte = new Font("TimesRoman ", Font.BOLD, 13);
     g2.setFont(fonte);
 
-    g2.drawString(s"\nscore : ${_athParam.score}", 10, 15)
-    g2.drawString(s"\nrecord : ${_athParam.maxScore}", 10, 15 + fonte.getSize + 2)
+    g2.drawString(s"\nscore : ${_athParam.score.value}", 10, 15)
+    g2.drawString(s"\nrecord : ${_athParam.maxScore.value}     ${if(_athParam.maxScore != Score.None) s"[${_athParam.maxScore.who.mkString(" & ")}]" else "" }"  , 10, 15 + fonte.getSize + 2)
     g2.drawString(s"\nbullet : ${_athParam.nbBullet}", 10, 15 + (fonte.getSize + 2) * 2)
   }
 
@@ -225,11 +251,10 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
 
   override def gameOver(implicit g2: Graphics2D, offX: Pos): Unit = {
     // g2.clearRect(0, 0, PlateauBase.w, PlateauBase.h)
-    g2.setPaint(Color.black)
     val fonte = new Font("TimesRoman ", Font.BOLD, 30);
     g2.setFont(fonte);
 
-    g2.drawString(s"Well Done : ${_athParam.score.toString}", offX.x - 10, offX.y - 10)
+    g2.drawString(s"Well Done : ${_athParam.score.value}", offX.x - 10, offX.y - 10)
 
 
   }

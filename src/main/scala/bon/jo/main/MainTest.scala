@@ -4,7 +4,7 @@ import java.awt.{Graphics, Graphics2D, Image}
 import java.awt.event.KeyEvent
 import java.awt.geom.Ellipse2D
 
-import bon.jo.controller.{ControllerMitron, ControllerMitronTestAth}
+import bon.jo.controller.{Controller, ControllerMitron, ControllerMitronTestAth, Score}
 import bon.jo.model.Model.{BasePos, PlateauBase}
 import bon.jo.model.{MitronAthParam, Model, Shapes}
 import bon.jo.view.{AwtView, MitronAwtView, View}
@@ -16,7 +16,7 @@ object MainTest extends App {
    class ControllerTest extends ControllerMitronTestAth {
     override var view: View[_, MitronAthParam] = _
     override var pause: Boolean = false
-
+     override var userName = ""
      override val model: Model = Model.Test
 
     override def notifyViewATH: Unit = {}
@@ -24,14 +24,14 @@ object MainTest extends App {
     override def notPauseProcess: Unit = {}
 
   }
-  class ViestTest(controller : ControllerTest) extends JPanel with AwtView[MitronAthParam] {
+  class ViestTest(override val controller : ControllerTest) extends JPanel with AwtView[MitronAthParam] {
     override def name: String = "test"
 
     override def image: Image = ImageIO.read(getClass.getResourceAsStream("/Ships/Turtle.png"))
 
     override def drawImage(e: Model.ModelElement, pa: Shapes.DirAndIdParam)(implicit g2d: Graphics2D): Unit ={}
 
-    var _athParam: MitronAthParam = MitronAthParam(0, 0, 0)
+    var _athParam: MitronAthParam = MitronAthParam(Score.None, Score.None, 0)
 
 
     def arhParam_=(arhParam: MitronAthParam) = {
@@ -41,7 +41,7 @@ object MainTest extends App {
     def arhParam = _athParam
 
     override def gameOver(implicit graphicContext: Graphics2D, offX: Model.Pos): Unit ={
-      
+
     }
 
     override def keyTyped(e: KeyEvent): Unit = {}
@@ -83,6 +83,8 @@ object MainTest extends App {
 
 
     }
+
+
   }
 
   val start = System.currentTimeMillis()

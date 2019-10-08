@@ -1,6 +1,7 @@
 package bon.jo.controller
 
 import java.io._
+import java.time.LocalDate
 
 import bon.jo.conf.{Conf, ConfDefault}
 import bon.jo.model.Model._
@@ -16,19 +17,38 @@ import scala.util.Random
 trait ControllerMitron extends Controller[MitronAthParam] {
 
 
-  override val model = Model.Test
+
+  override val model: Model = Model.Test
   private var _pause = false
   private var _gameOver = false
   private var _nbJ: Int = 1
-  private var _score = 0
+  private var _score = Score.None.copy()
   private var _cnt = 1
+  private var _scores: Scores = Scores.empty
+  def scores = _scores
   private var _bulletCnt = Conf.nbBullet
-  override var view: View[_,MitronAthParam] = null
+  private var _userName: String = ""
 
+  def userName:String = {
+    _userName
+  }
+
+  def userName_=(str: String):Unit = {
+    maxScore = _score.copy(who = List(str))
+    writeMaxScore(maxScore)
+    _userName = str
+  }
+
+  override var view: View[_, MitronAthParam] = null
+  var maxScore: Score = Score.None.copy()
   val sourceIndex = 1
 
+  override def afterLaunch(viewInit: Model => View[_, MitronAthParam]) = {
+    maxScore = readMaxScore()
+    _score = Score.None.copy()
+    super.afterLaunch(viewInit)
+  }
 
-  var maxScore = readMaxScore()
 
   def addBullet() = {
     _bulletCnt += 1;
@@ -94,7 +114,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
     view.newGame
 
-    _score = 0
+    _score = Score.None
     notifyViewATH
     _bulletCnt = Conf.nbBullet
     _cnt = 1
@@ -135,23 +155,23 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   }
 
-  private def writeMaxScore(scoreMax: Int) = {
-
-    val fw = new DataOutputStream(new FileOutputStream("data2"))
+  private def writeMaxScore(scoreMax: Score) = {
+    _scores.add(scoreMax)
+    val fw = new ObjectOutputStream(new FileOutputStream("data3"))
     fw.writeUTF("max_score")
-    fw.writeInt(scoreMax)
+    fw.writeObject(_scores)
     fw.close()
   }
 
-  def readMaxScore(): Int = {
-    if ((new File("data2")).exists()) {
-      val fw = new DataInputStream(new FileInputStream("data2"))
+  def readMaxScore(): Score = {
+    if ((new File("data3")).exists()) {
+      val fw = new ObjectInputStream(new FileInputStream("data3"))
       fw.readUTF()
-      val ret = fw.readInt()
+      _scores = fw.readObject().asInstanceOf[Scores]
       fw.close()
-      ret
+      _scores.max
     } else {
-      0
+      Score.None.copy()
     }
   }
 
@@ -175,8 +195,8 @@ trait ControllerMitron extends Controller[MitronAthParam] {
       _pause = true
 
       if (_score > maxScore) {
-        maxScore = _score
-        writeMaxScore(maxScore)
+        maxScore = _score.copy(who = List(""),when = LocalDate.now())
+        view.getLoserUserName
       }
     }
   }

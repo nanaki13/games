@@ -5,6 +5,8 @@ import bon.jo.model.{AthParam, Model}
 import bon.jo.view.View
 
 trait Controller[athParam <: AthParam] {
+  var userName :String
+
   var view:  View[_,athParam]
   var pause: Boolean
 
