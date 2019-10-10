@@ -4,24 +4,30 @@ package bon.jo.view
 import java.awt.{BorderLayout, Color, Dimension, FlowLayout, Font, Graphics, Graphics2D, Paint}
 import java.awt.event.{KeyEvent, KeyListener}
 import java.awt.geom.{AffineTransform, Ellipse2D, Rectangle2D}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream, ObjectInputStream, ObjectOutputStream}
+import java.net.{ServerSocket, Socket}
+import java.time.Instant
 
 import bon.jo.conf.Conf
-import bon.jo.controller.{ControllerMitron, Score}
+import bon.jo.controller.Score.ScoreTest
+import bon.jo.controller.{ControllerMitron, Score, Scores, SerUNerOption, SerUnserUtil}
 import bon.jo.model.{MitronAthParam, Model}
 import bon.jo.model.Model._
 import bon.jo.model.Shape
 import bon.jo.model.Shape.{Circle, ComposedShape, Point, Rectangle}
 import bon.jo.model.Shapes.{DirAndIdParam, ShapeParamMultiple, ShapeParamOne, ShapeParamTwo}
 import javax.swing.{JButton, JPanel, WindowConstants}
+import bon.jo.controller.ControllerMitron.game
 
+import scala.concurrent.Future
 import scala.util.Random
 
-class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends JPanel with AwtView[ MitronAthParam] with Refreh with KeyListener {
-
+class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends JPanel with AwtView[MitronAthParam] with Refreh with KeyListener {
 
 
   import javax.imageio.ImageIO
-  override val name= "Mirtou"
+
+  override val name = "Mirtou"
   val bullet = ImageIO.read(getClass.getResourceAsStream("/bullet.png"))
   val ennemi = ImageIO.read(getClass.getResourceAsStream("/Ships/Dove.png"))
   val user = ImageIO.read(getClass.getResourceAsStream("/Ships/Turtle.png"))
@@ -36,7 +42,10 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     _athParam = arhParam
 
   }
+
+
   def arhParam = _athParam
+
   override def init() = {
 
 
@@ -52,8 +61,6 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     super.init()
 
   }
-
-
 
 
   val identity = new AffineTransform
@@ -90,7 +97,6 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
   }
 
 
-
   var ff = for {_ <- 1 to 50
   } yield {
     Pos.random(PlateauBase.w, PlateauBase.h)
@@ -114,12 +120,13 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     }
   }
 
-  def randomColor: Paint = new Color(Random.nextFloat(),Random.nextFloat(),Random.nextFloat())
+  def randomColor: Paint = new Color(Random.nextFloat(), Random.nextFloat(), Random.nextFloat())
 
   override def paint(g: Graphics): Unit = { //custom color
     //create new Graphics2D instance using Graphics parent
 
     implicit val g2 = g.asInstanceOf[Graphics2D]
+    implicit val nb : Int = controller.nbJ
 
     //set color
 
@@ -139,10 +146,11 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     g2.setPaint(Color.white)
     ff = ff.map(stars)
     ff.foreach(p => {
-      if(register){
+      if (register) {
         g2.setPaint(randomColor)
       }
-      g2.drawOval(p.x, p.y, 2, 2)})
+      g2.drawOval(p.x, p.y, 2, 2)
+    })
     val _a = (PlateauBase.w / 1.5).toFloat
     val _b = PlateauBase.h.toFloat
     val a = _a * cntPlanetGrow / (1000f)
@@ -162,21 +170,37 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     elmts.elements.foreach {
       draw
     }
-    drawScore
+    drawATH
     if (controller.pause && controller.gameOver) {
-      val offset_ = BasePos(PlateauBase.w / 2, PlateauBase.h / 2)
+      val offset_ = BasePos(PlateauBase.w / 2  - 100, (PlateauBase.h / 10))
       gameOver(g2, offX = offset_)
     }
 
-    if(register){
-      val str = userIn.toString()
-      g2.setPaint(defTexColor)
-      g2.drawString("Enter your name : "+str,200,200)
-      val l = controller.scores.scores.sorted.reverse
+    if (register || controller.pause) {
+      g2.setFont(fonte)
+      if (register) {
+        val str = userIn.toString()
+        g2.setPaint(defTexColor)
+        g2.drawString(s"Enter your name J${cntInputText} : " + str, 200, 200)
+      }
+
+      val l = controller.bestScoreListeLocal
       val fullsize = l.size
-      val brn = if( fullsize > 10 ) 10  else fullsize
-      for(i <-1 to brn){
-        g2.drawString(l(i).tuUiString,200,250+i*20)
+      val brn = if (fullsize > 10) 10 else fullsize
+      g2.drawString("Local", 200, 300)
+      for (i <- 0 until brn) {
+        g2.drawString(l(i).tuUiString, 200, 350 + i * 40)
+      }
+      if (controller._online) {
+        g2.drawString("Online", 600, 300)
+        val l = controller.bestScoreListeOnline
+        val fullsize = l.size
+        val brn = if (fullsize > 10) 10 else fullsize
+        for (i <- 0 until brn) {
+          g2.drawString(l(i).tuUiString, 600, 350 + i *40)
+        }
+      }else{
+        g2.drawString("No connection", 600, 300)
       }
     }
 
@@ -186,63 +210,65 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
   private var cntPlanetGrow: Float = 0
 
   type View = AwtView[MitronAthParam]
+
   override def keyTyped(e: KeyEvent): Unit = {
 
 
   }
 
   override def keyPressed(e: KeyEvent): Unit = {
-
-    e.getKeyCode match {
-      case 40 => controller.userWant(Direction.down)
-      case 38 => controller.userWant(Direction.up)
-      case 37 => controller.userWant(Direction.right)
-      case 39 => controller.userWant(Direction.left)
-      case 90 => controller.userWant2(Direction.up)
-      case 83 => controller.userWant2(Direction.down)
-      case 81 => controller.userWant2(Direction.right)
-      case 68 => controller.userWant2(Direction.left)
-      case _ =>
-
+    if (!register) {
+      e.getKeyCode match {
+        case KeyEvent.VK_DOWN => controller.userWant(Direction.down)
+        case  KeyEvent.VK_UP => controller.userWant(Direction.up)
+        case  KeyEvent.VK_RIGHT => controller.userWant(Direction.right)
+        case  KeyEvent.VK_LEFT => controller.userWant(Direction.left)
+        case KeyEvent.VK_Z if controller.nbJ > 1=> controller.userWant2(Direction.up)
+        case KeyEvent.VK_S if controller.nbJ > 1 => controller.userWant2(Direction.down)
+        case KeyEvent.VK_D if controller.nbJ > 1=> controller.userWant2(Direction.right)
+        case KeyEvent.VK_Q if controller.nbJ > 1=> controller.userWant2(Direction.left)
+        case a => println(s"${a} not mapped")
+      }
     }
   }
 
   override def keyReleased(e: KeyEvent): Unit = {
-
-    e.getKeyCode match {
-      case 40 => controller.userWant(Direction.none)
-      case 38 => controller.userWant(Direction.none)
-      case 37 => controller.userWant(Direction.none)
-      case 39 => controller.userWant(Direction.none)
-      case 90 => controller.userWant2(Direction.none)
-      case 83 => controller.userWant2(Direction.none)
-      case 81 => controller.userWant2(Direction.none)
-      case 68 => controller.userWant2(Direction.none)
-      case 17 => controller.userWantShowt()
-      case 16 => controller.userWantShowt()
-      case 32 => controller.userWantShowt2()
-
-      case ee =>{
-        println(s"${ee} not mapped")
-        _keyTyped(e)
-        _athParam = _athParam.copy(maxScore = _athParam.score.copy(who = List(userIn.toString())))
+    if (!register) {
+      e.getKeyCode match {
+        case KeyEvent.VK_DOWN => controller.userWant(Direction.none)
+        case  KeyEvent.VK_UP => controller.userWant(Direction.none)
+        case  KeyEvent.VK_RIGHT => controller.userWant(Direction.none)
+        case  KeyEvent.VK_LEFT => controller.userWant(Direction.none)
+        case KeyEvent.VK_Z if controller.nbJ > 1=> controller.userWant2(Direction.none)
+        case KeyEvent.VK_S if controller.nbJ > 1=> controller.userWant2(Direction.none)
+        case KeyEvent.VK_D if controller.nbJ > 1=> controller.userWant2(Direction.none)
+        case KeyEvent.VK_Q if controller.nbJ > 1 => controller.userWant2(Direction.none)
+        case KeyEvent.VK_SHIFT => controller.userWantShowt()
+        case KeyEvent.VK_CONTROL => controller.userWantShowt()
+        case KeyEvent.VK_SPACE if(controller.nbJ > 1) => controller.userWantShowt2()
+        case ee => {
+          println(s"$ee not mapped")
+        }
       }
-
+    } else {
+      _keyTyped(e)
+      _athParam = _athParam.copy(maxScore = _athParam.score.copy(who = List(userIn.toString())))
     }
+
 
   }
 
 
   val defTexColor: Paint = Color.magenta
-
-  def drawScore(implicit g2: Graphics2D): Unit = {
+  val fonte = new Font("TimesRoman ", Font.BOLD, 30)
+  val fonteMini = new Font("TimesRoman ", Font.BOLD, 13)
+  def drawATH(implicit g2: Graphics2D): Unit = {
     g2.setPaint(defTexColor)
-    val fonte = new Font("TimesRoman ", Font.BOLD, 13);
-    g2.setFont(fonte);
+    g2.setFont(fonteMini);
 
     g2.drawString(s"\nscore : ${_athParam.score.value}", 10, 15)
-    g2.drawString(s"\nrecord : ${_athParam.maxScore.value}     ${if(_athParam.maxScore != Score.None) s"[${_athParam.maxScore.who.mkString(" & ")}]" else "" }"  , 10, 15 + fonte.getSize + 2)
-    g2.drawString(s"\nbullet : ${_athParam.nbBullet}", 10, 15 + (fonte.getSize + 2) * 2)
+    g2.drawString(s"\nrecord : ${_athParam.maxScore.value}     ${if (_athParam.maxScore != Score.None) s"[${_athParam.maxScore.who.mkString(" & ")}]" else ""}", 10, 15 + fonteMini.getSize + 2)
+    g2.drawString(s"\nbullet : ${_athParam.nbBullet}", 10, 15 + (fonteMini.getSize + 2) * 2)
   }
 
   val south: JPanel = new JPanel()
@@ -251,7 +277,7 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
 
   override def gameOver(implicit g2: Graphics2D, offX: Pos): Unit = {
     // g2.clearRect(0, 0, PlateauBase.w, PlateauBase.h)
-    val fonte = new Font("TimesRoman ", Font.BOLD, 30);
+
     g2.setFont(fonte);
 
     g2.drawString(s"Well Done : ${_athParam.score.value}", offX.x - 10, offX.y - 10)
@@ -260,6 +286,221 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
   }
 
 
+}
+
+object MitronServeur extends App with Log {
+  import scala.concurrent.ExecutionContext.Implicits.global
+  import ClientServeur._
 
 
+  val sc = new ServerSocket(123)
+  implicit val cl = classOf[Scores]
+
+  override def name = "serveur_" + Thread.currentThread()
+
+  class Connection(val clientSocket: Socket) extends ClientServeur {
+    val in = new DataInputStream(clientSocket.getInputStream)
+    val out = new DataOutputStream(clientSocket.getOutputStream)
+
+    override def name = "serveur_client_" + Thread.currentThread()
+  }
+
+  while (true) {
+    log("waiting for client")
+    try {
+      val connection: Connection = new Connection(sc.accept())
+      Future {
+        while (!connection.clientSocket.isClosed) {
+          log("client come")
+          var opCnt: Int = 0
+          // var scoresOption  :Option[Scores] = None
+          //     implicit val unser_ : BytesToT[_] = unser
+
+          implicit val opt: SerUNerOption = Conf.outFile.copy(filePath = Conf.outFile.filePath + "_server")
+
+          def scores = SerUnserUtil.readObject(Scores.empty)
+
+          val resultProcessClient: Any = connection.read[String].toType[String] match {
+            case "maxScore" => {
+              val scoresOption = scores
+              connection.write(Message(scoresOption)) match {
+                case 'A' => "OK"
+              }
+
+            }
+            case "writeScore" => {
+              log(s"wait read score")
+              implicit val cl: Class[Score] = classOf[Score]
+
+              val sc: Score = connection.read[Score].toType
+              implicit val nbJ: Int =  sc.nbJ
+              val scoresOption = scores
+
+              scoresOption addIfBest sc
+              log(s"we have receive this new score : $sc")
+              SerUnserUtil.writeObject(scoresOption)
+              "OK"
+            }
+            case "exit" => {
+              log(s"exit"); connection.clientSocket.close(); "OK"
+            }
+            case _ => {
+              log(s"unknow ùessage : close"); connection.clientSocket.close(); "OK"
+            }
+          }
+          opCnt += 1
+          log(s"client proces result ${opCnt}  : $resultProcessClient")
+
+
+        }
+      }
+
+    } catch {
+      case exception: Exception => exception.printStackTrace()
+    }
+
+
+  }
+  sc.close()
+
+
+}
+
+object TestClient extends App with MitronClient {
+
+
+  val sc = new Socket("localhost", 123)
+  val out = new DataOutputStream(sc.getOutputStream)
+  val in = new DataInputStream(sc.getInputStream)
+
+  val ma = getMaxScores
+  val o: Scores = ma
+  println(writeScore(Scores.randrom(1).scores(0)))
+  exit
+  sc.close()
+
+  override def name = "client" + Thread.currentThread()
+}
+
+trait MitronClient extends ClientServeur {
+  implicit val cl = classOf[Scores]
+
+  import ClientServeur._
+
+  def exit = write(Message("exit")) match {
+    case 'A' => "OK"
+    case _ => "KO"
+  }
+
+  def getMaxScores: Scores = {
+    write(Message("maxScore")) match {
+      case 'A' => read[Scores].toType
+    }
+  }
+
+  def writeScore(s: Score) = {
+    log("send write score message")
+    write(Message("writeScore")(ClientServeur.ser)) match {
+      case 'A' => {
+        log("serveur say ok")
+        log("send the  message")
+        val m = Message[Score](s)
+        write(m) match {
+          case 'A' => {
+            log("server say ok for write score");
+            "OK"
+          }
+          case _ => {
+            log("server say other for write score");
+            "OK"
+          }
+        }
+      }
+      case _ => "KO"
+    }
+  }
+}
+
+object ClientServeur {
+  implicit def ser[T <: Serializable](t: T): Array[Byte] = {
+    val _out = new ByteArrayOutputStream()
+    val __out = new ObjectOutputStream(_out)
+    __out.writeObject(t)
+    __out.flush()
+    __out.close()
+    _out.toByteArray
+  }
+
+  implicit def unser[T]: BytesToT[T] = BytesToT((array: Array[Byte]) => {
+    val fw = new ObjectInputStream(new ByteArrayInputStream(array))
+    val ret = fw.readObject().asInstanceOf[T]
+    fw.close()
+    ret
+  }
+  )
+
+}
+
+trait Log {
+  def log(text: String) = println(s"${Instant.now()} : ${name} : $text")
+
+  def name: String
+}
+
+trait ClientServeur extends Log {
+
+
+  def out: DataOutputStream
+
+  def in: DataInputStream
+
+
+  def write(message: Message[_]) = {
+    log(s" write length: $message")
+    out.writeInt(message.length)
+    log(s" write array: $message")
+    out.write(message.array)
+    log(s" wait ok ")
+    in.readChar()
+  }
+
+  def read[T]: Message[T] = {
+    log(s" read message length ")
+    val le = in.readInt()
+    val by = new Array[Byte](le)
+    log(s" read byte of message")
+    in.read(by, 0, le)
+    log(s" write ok")
+    out.writeChar('A')
+    Message[T](le, by)
+  }
+}
+
+case class BytesToT[T](des: Array[Byte] => T)
+
+case class Message[T](length: Int, array: Array[Byte]) {
+  def toObject(implicit des: Array[Byte] => T): Any = {
+    val ret: Any = des(this.array)
+
+  }
+
+  def asUtf8: String = {
+    new String(array, "utf-8")
+  }
+
+  def toType[T](implicit tr: BytesToT[T]): T = {
+    val ret: T = tr.des(this.array)
+
+    ret
+  }
+}
+
+object Message {
+
+
+  def apply[T](t: T)(implicit undes: T => Array[Byte]): Message[T] = {
+    val by = undes(t)
+    val lenght = by.length
+    Message[T](lenght, by)
+  }
 }

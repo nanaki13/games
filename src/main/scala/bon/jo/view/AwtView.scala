@@ -45,19 +45,28 @@ trait AwtView[AthParam_ <: AthParam] extends View[Graphics2D, AthParam_] with Ke
     register = true
     userIn.setLength(0)
   }
-
-   def _keyTyped(e: KeyEvent): Unit = {
+  var cntInputText: Int = 1
+  def _keyTyped(e: KeyEvent): Unit = {
 
     if (register) {
-      register = !(e.getKeyCode == 10)
-      if(register){
-        if(e.getKeyCode!=8){
+      register = !(e.getKeyCode == 10 /* enter */)
+      if (register) {
+        val keyCode = e.getKeyCode
+
+        if (keyCode >= KeyEvent.VK_0 && keyCode <= KeyEvent.VK_9 ||
+          keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z) {
           userIn.append(e.getKeyChar)
-        }else if (!userIn.isEmpty){
-          userIn.setLength(userIn.length()-1)
+        } else if (e.getKeyCode == KeyEvent.VK_BACK_SPACE && !userIn.isEmpty) {
+          userIn.setLength(userIn.length() - 1)
         }
-      }else{
+      } else {
+        cntInputText+=1
         controller.userName = userIn.toString()
+        userIn.setLength(0)
+        register = controller.continuRegisterUserName
+        if (!register) {
+          cntInputText=1
+        }
       }
     }
 
@@ -95,9 +104,15 @@ trait AwtView[AthParam_ <: AthParam] extends View[Graphics2D, AthParam_] with Ke
           case Shape(Rectangle, pa: ShapeParamTwo) => {
             g2.fill(new Rectangle2D.Double(e.x + offX.x - pa.x / 2d, e.y + offX.y - pa.y / 2d, pa.x, pa.y))
           }
-          case Shape(Circle, pa: ShapeParamOne[Int]) => {
-            val d = 2 * pa.x;
-            g2.fill(new Ellipse2D.Double(e.x + offX.x - pa.x, e.y + offX.y - pa.x, d, d))
+          case Shape(Circle, pa: ShapeParamOne[_]) => {
+            pa.x match {
+              case r : Int => {
+                val d = 2 * r
+                g2.fill(new Ellipse2D.Double(e.x + offX.x - r, e.y + offX.y - r, d, d))
+              }
+
+            }
+
           }
           case Shape(ComposedShape, pa: ShapeParamMultiple) => {
             pa.inner.foreach { e =>

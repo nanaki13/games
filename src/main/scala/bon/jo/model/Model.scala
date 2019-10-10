@@ -53,7 +53,7 @@ object Model {
       case Direction.right => 0
       case Direction.down => 90
       case Direction.left => 180
-      case Direction.none => 0
+      case _ => 0
     }
 
 
@@ -62,6 +62,7 @@ object Model {
       case Direction.right => "right"
       case Direction.down => "down"
       case Direction.left => "left"
+      case _ => "up"
     }
 
     def rotate90: Direction = {
@@ -70,6 +71,7 @@ object Model {
         case Direction.right => Direction.down
         case Direction.down => Direction.left
         case Direction.left => Direction.up
+        case _ =>  Direction.none
       }
     }
 

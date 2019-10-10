@@ -7,12 +7,13 @@ import scala.util.Random
 
 
 case class Score(
+                game : String,
                   when: LocalDate,
                   value: Int,
                   who:List[String]
                 ) extends Ordered[Score] {
   override def compare(that: Score): Int = this.value - that.value
-
+  def nbJ: Int = who.size
   def  + (v:Int) : Score = this.copy(value = this.value+v)
   def tuUiString : String =  s"$value : ${who.mkString(" & ")}"
 }
@@ -20,14 +21,14 @@ case class Score(
 
 
 object Score{
-  val None : Score = { val s= Score(LocalDate.EPOCH,0,Nil);println(s);s}
+  val None : Score = Score("",LocalDate.EPOCH,0,Nil)
 
   object ScoreTest extends App{
 
 
 
 
-    def random = Score(LocalDate.of(randomYear, randomMonth, randomDay), Random.nextInt(10000),List("Bob"))
+    def random = Score("Mitron",LocalDate.of(randomYear, randomMonth, randomDay), Random.nextInt(10000),List("Bob"))
 
     def randomMonth = Random.nextInt(12) + 1
 
@@ -39,6 +40,6 @@ object Score{
       random
     }
 
-    println(Scores(randomSeq(1000)).maxByMonth)
+
   }
 }

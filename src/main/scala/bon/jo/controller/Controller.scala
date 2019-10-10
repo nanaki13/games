@@ -19,7 +19,7 @@ trait Controller[athParam <: AthParam] {
   }
 
   def notifyViewATH
-
+  def continuRegisterUserName : Boolean
   def notPauseProcess
 
   def launch(viewInit: Model => View[_,athParam]): Unit = {

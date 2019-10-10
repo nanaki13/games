@@ -23,7 +23,8 @@ object MainTest extends App {
 
     override def notPauseProcess: Unit = {}
 
-  }
+     override def continuRegisterUserName: Boolean = false
+   }
   class ViestTest(override val controller : ControllerTest) extends JPanel with AwtView[MitronAthParam] {
     override def name: String = "test"
 

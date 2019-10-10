@@ -1,6 +1,7 @@
 package bon.jo.controller
 
 import java.io._
+import java.net.Socket
 import java.time.LocalDate
 
 import bon.jo.conf.{Conf, ConfDefault}
@@ -8,14 +9,19 @@ import bon.jo.model.Model._
 import bon.jo.model.Shape.ComposedShape
 import bon.jo.model.Shapes.ShapeParamMultiple
 import bon.jo.model._
-import bon.jo.view.View
+import bon.jo.view.TestClient.{exit, getMaxScores, writeScore}
+import bon.jo.view.{MitronClient, MitronServeur, View}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
+import ControllerMitron._
+
+object ControllerMitron {
+  implicit val game = "mitron_v0.1"
+}
 
 trait ControllerMitron extends Controller[MitronAthParam] {
-
 
 
   override val model: Model = Model.Test
@@ -25,27 +31,66 @@ trait ControllerMitron extends Controller[MitronAthParam] {
   private var _score = Score.None.copy()
   private var _cnt = 1
   private var _scores: Scores = Scores.empty
+  private var _onlineScores: Scores = Scores.empty
+
   def scores = _scores
+
+  def onlineScores = _onlineScores
+
+  def bestScoreListeLocal(implicit nbPlayer: Int, game: String): Seq[Score] = _scores.bestScoreListe
+
+  def bestScoreListeOnline(implicit nbPlayer: Int, game: String): Seq[Score] = _onlineScores.bestScoreListe
+
   private var _bulletCnt = Conf.nbBullet
   private var _userName: String = ""
+  private var _client: MitronClient = null
 
-  def userName:String = {
+  def userName: String = {
     _userName
   }
 
-  def userName_=(str: String):Unit = {
-    maxScore = _score.copy(who = List(str))
-    writeMaxScore(maxScore)
-    _userName = str
+  def continuRegisterUserName: Boolean = {
+    if (_score.who.size == _nbJ) {
+      writeMaxScore(_score)
+      readOnlie
+      notifyViewATH
+    }
+    _score.who.size < _nbJ
+  }
+
+  def userName_=(str: String): Unit = {
+    if(!str.isBlank){
+      _userName = str
+      _score = _score.copy(who = str :: _score.who, game = game)
+    }
   }
 
   override var view: View[_, MitronAthParam] = null
   var maxScore: Score = Score.None.copy()
   val sourceIndex = 1
 
+  var _online: Boolean = false
+
+  def connect = {
+    if (_online == false) {
+      try {
+        _client = MitronClientImpl()
+        _onlineScores = _client.getMaxScores
+        println(_onlineScores)
+        _online = true
+      } catch {
+        case e: Exception => _online = false
+      }
+    }
+  }
+
+
   override def afterLaunch(viewInit: Model => View[_, MitronAthParam]) = {
-    maxScore = readMaxScore()
-    _score = Score.None.copy()
+    maxScore = readLocalAndGetMax()
+    println(s"current max $maxScore")
+    _score = Score.None.copy(game)
+
+    connect
     super.afterLaunch(viewInit)
   }
 
@@ -101,7 +146,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     }
   }
 
-  def newGame(nbJ: Short): Unit = {
+  def newGame(implicit nbJ: Short): Unit = {
     //  gameOver = false
 
 
@@ -111,16 +156,17 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     player2.pos = safePos
     model.elements.clear()
     model.elements.addAll(el)
-
     view.newGame
-
     _score = Score.None
-    notifyViewATH
+
+
     _bulletCnt = Conf.nbBullet
     _cnt = 1
     _pause = false
     _gameOver = false
     _nbJ = nbJ
+    maxScore = readLocalAndGetMax()
+    notifyViewATH
     Conf.enemyProba = ConfDefault.startProbaMonstre
 
   }
@@ -143,7 +189,6 @@ trait ControllerMitron extends Controller[MitronAthParam] {
       val speedY = if (y__ < 0 || y__ > p.h) -e._1.speed.y else e._1.speed.y
       e._1.speed = Speed(speedX, speedY)
       e._1.pos = BasePos(x_, y_)
-      //   elment.update(e._2, e._1._copy(BasePos(x_, y_), speed = e._1.speed.copy(speedX, speedY)))
       e._1 match {
         case BaseModel(p, Shape(ComposedShape, pa: ShapeParamMultiple), _, _, _) => {
           pa.inner.zipWithIndex.foreach(e => update(e, pa.inner, PlateauBase))
@@ -155,25 +200,38 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   }
 
+
+  implicit val optionFileee: SerUNerOption = Conf.outFile
+
   private def writeMaxScore(scoreMax: Score) = {
+    implicit val nbJ = _nbJ
     _scores.add(scoreMax)
-    val fw = new ObjectOutputStream(new FileOutputStream("data3"))
-    fw.writeUTF("max_score")
-    fw.writeObject(_scores)
-    fw.close()
+    SerUnserUtil.writeObject(_scores)
+    if (_online && (scoreMax > _onlineScores.min || _onlineScores.size < 20)) {
+      _client.writeScore(scoreMax)
+    }
+
   }
 
-  def readMaxScore(): Score = {
-    if ((new File("data3")).exists()) {
-      val fw = new ObjectInputStream(new FileInputStream("data3"))
-      fw.readUTF()
-      _scores = fw.readObject().asInstanceOf[Scores]
-      fw.close()
-      _scores.max
-    } else {
+  def readLocalAndGetMax(): Score = {
+    implicit val nbJ = _nbJ
+    _scores = SerUnserUtil.readObject(Scores.empty)
+    if (_scores.scores.isEmpty) {
       Score.None.copy()
+    } else {
+      println(game)
+      _scores.max
+    }
+
+
+  }
+
+  def readOnlie : Unit = {
+    if (_online) {
+      _onlineScores = _client.getMaxScores
     }
   }
+
 
   def players = player1 :: {
     if (_nbJ == 2) {
@@ -193,9 +251,9 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     if (n) {
       _gameOver = true
       _pause = true
-
-      if (_score > maxScore) {
-        maxScore = _score.copy(who = List(""),when = LocalDate.now())
+      implicit val nbJ = _nbJ
+      if (_score > maxScore || scores.size < 10) {
+        maxScore = _score.copy(who = Nil, when = LocalDate.now())
         view.getLoserUserName
       }
     }
@@ -319,8 +377,8 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   def userWant(direction: Direction): Unit = {
     direction match {
-      case Direction.left => model.player1.speed = Speed(5, 0)
-      case Direction.right => model.player1.speed = Speed(-5, 0)
+      case Direction.left => model.player1.speed = Speed(-5, 0)
+      case Direction.right => model.player1.speed = Speed(5, 0)
       case Direction.down => model.player1.speed = Speed(0, 5)
       case Direction.up => model.player1.speed = Speed(0, -5)
       //  case Direction.none => player <-- Speed.None
@@ -330,8 +388,8 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   def userWant2(direction: Direction): Unit = {
     direction match {
-      case Direction.left => model.player2.speed = Speed(5, 0)
-      case Direction.right => model.player2.speed = Speed(-5, 0)
+      case Direction.left => model.player2.speed = Speed(-5, 0)
+      case Direction.right => model.player2.speed = Speed(5, 0)
       case Direction.down => model.player2.speed = Speed(0, 5)
       case Direction.up => model.player2.speed = Speed(0, -5)
       //  case Direction.none => player <-- Speed.None
@@ -339,5 +397,17 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     }
   }
 
+  case class MitronClientImpl(host: String = "82.254.84.166", port: Int = 123) extends MitronClient {
+
+    val sc = new Socket(host, port)
+    val out = new DataOutputStream(sc.getOutputStream)
+    val in = new DataInputStream(sc.getInputStream)
+
+    override def name = "client" + Thread.currentThread()
+  }
+
 
 }
+
+
+

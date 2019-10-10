@@ -1,5 +1,6 @@
 package bon.jo.conf
 
+import bon.jo.controller.SerUNerOption
 import bon.jo.model.Proba.CreatorShortcut._
 import bon.jo.model.Proba.{ProbaEvent, ProbaEvolution}
 
@@ -16,6 +17,7 @@ case class ConfDefault(
                         var enemyProba: ProbaEvent = ConfDefault.startProbaMonstre,
                         newBulletProba: ProbaEvent = (0.5, 100) ~,
                         newNoveProba: ProbaEvent = (0.2, 100) ~,
-                        ennemyEvoution: ProbaEvolution = (0.7, 100) ev ( -1, 0.01)
+                        ennemyEvoution: ProbaEvolution = (0.7, 100) ev ( -1, 0.01),
+                         outFile :  SerUNerOption = SerUNerOption("data.v1.0")
 
                )
