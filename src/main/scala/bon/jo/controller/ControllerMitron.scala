@@ -9,13 +9,13 @@ import bon.jo.model.Model._
 import bon.jo.model.Shape.ComposedShape
 import bon.jo.model.Shapes.ShapeParamMultiple
 import bon.jo.model._
-import bon.jo.view.TestClient.{exit, getMaxScores, writeScore}
-import bon.jo.view.{MitronClient, MitronServeur, View}
+import bon.jo.view.View
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 import ControllerMitron._
+import bon.jo.network.MitronClient
 
 object ControllerMitron {
   implicit val game = "mitron_v0.1"
@@ -397,7 +397,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     }
   }
 
-  case class MitronClientImpl(host: String = "82.254.84.166", port: Int = 123) extends MitronClient {
+  case class MitronClientImpl(host: String = Conf.url, port: Int = Conf.serverPort) extends MitronClient {
 
     val sc = new Socket(host, port)
     val out = new DataOutputStream(sc.getOutputStream)
