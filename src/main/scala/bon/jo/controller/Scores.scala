@@ -51,7 +51,7 @@ case class Scores(var scores: Seq[Score]) {
       fl.min
     }
   }
-  def size(implicit nbPlayer: Int, game: String): Int = scores.filter(_.who.size == nbPlayer).size
+  def size(implicit nbPlayer: Int, game: String): Int = scores.count(_.who.size == nbPlayer)
 }
 
 object Scores {

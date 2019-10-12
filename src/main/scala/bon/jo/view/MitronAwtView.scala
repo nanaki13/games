@@ -2,7 +2,7 @@ package bon.jo.view
 
 
 import java.awt.{BorderLayout, Color, Dimension, FlowLayout, Font, Graphics, Graphics2D, Paint}
-import java.awt.event.{KeyEvent, KeyListener}
+import java.awt.event.{ActionListener, KeyEvent, KeyListener}
 import java.awt.geom.{AffineTransform, Ellipse2D, Rectangle2D}
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.net.{ServerSocket, Socket}
@@ -46,13 +46,23 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
 
   def arhParam = _athParam
 
+  var warnUserToFnishSate = false
+
+  def warnUserToFnish: Unit = {
+    root.requestFocus()
+    warnUserToFnishSate = true
+  }
+
+  def actionButton(nbJ : Short): ActionListener ={
+    _ =>  if(!register) {warnUserToFnishSate = false;controller.newGame(nbJ)}else warnUserToFnish
+  }
   override def init() = {
 
 
     this.setPreferredSize(new Dimension(PlateauBase.w, PlateauBase.h))
 
-    button.addActionListener(e => controller.newGame(1))
-    button2.addActionListener(e => controller.newGame(2))
+    button.addActionListener(actionButton(1))
+    button2.addActionListener(actionButton(2))
     south.setLayout(new FlowLayout())
     south.add(button)
     south.add(button2)
@@ -182,6 +192,9 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
         val str = userIn.toString()
         g2.setPaint(defTexColor)
         g2.drawString(s"Enter your name J${cntInputText} : " + str, 200, 200)
+        if(warnUserToFnishSate){
+          g2.drawString(s"tape 'Enter' for validate your score before launching an new game ;-)", 200, 200+ fonte.getSize + 2)
+        }
       }
 
       val l = controller.bestScoreListeLocal

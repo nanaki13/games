@@ -7,7 +7,7 @@ import bon.jo.model.Proba.{ProbaEvent, ProbaEvolution}
 import scala.language.postfixOps
 object ConfDefault{
   val startProbaMonstre = (0.5, 100) ~
-  val prod = false
+  val prod = true
 }
 
 case class ConfDefault(

@@ -253,7 +253,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
       _pause = true
       implicit val nbJ = _nbJ
       if (_score > maxScore || scores.size < 10) {
-        maxScore = _score.copy(who = Nil, when = LocalDate.now())
+        _score = _score.copy(who = Nil, when = LocalDate.now())
         view.getLoserUserName
       }
     }
@@ -400,6 +400,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
   case class MitronClientImpl(host: String = Conf.url, port: Int = Conf.serverPort) extends MitronClient {
 
     val sc = new Socket(host, port)
+    sc.setSoTimeout(5000)
     val out = new DataOutputStream(sc.getOutputStream)
     val in = new DataInputStream(sc.getInputStream)
 
