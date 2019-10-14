@@ -1,6 +1,24 @@
-name := "engine"
+name := """scala-play-angular-seed"""
+lazy val commonSettings = Seq(
+  organization := "bon.jo",
+  version := "1.1",
+  scalaVersion := "2.13.1"
+)
 
-version := "1.0.1"
+//lazy val wr = (project in file("works-repository")).settings(
+   // commonSettings,
+    // other settings
+ // )
+lazy val root = (project in file(".")).settings(
+  commonSettings,
+  watchSources ++= (baseDirectory.value / "public/ui" ** "*").get
+)
+//.dependsOn(wr)
+//.enablePlugins(PlayScala)
 
-scalaVersion := "2.13.1"
+resolvers += Resolver.sonatypeRepo("snapshots")
+
+//libraryDependencies += guice
+//libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
+//libraryDependencies += "com.h2database" % "h2" % "1.4.196"
 
