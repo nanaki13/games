@@ -1,4 +1,4 @@
-name := """scala-play-angular-seed"""
+name := """mitron"""
 lazy val commonSettings = Seq(
   organization := "bon.jo",
   version := "1.1",
