@@ -1,9 +1,10 @@
-package model
+package bon.jo.model
 
 import java.awt.Color
 
-import model.Animation.{AnimationProp, DieWithCount}
-import model.Model.{BaseModel, ModelElement}
+import bon.jo.conf.Conf
+import bon.jo.model.Animation.{AnimationProp, DieWithCount}
+import bon.jo.model.Model.{BaseModel, ModelElement}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -52,7 +53,7 @@ object Model {
       case Direction.right => 0
       case Direction.down => 90
       case Direction.left => 180
-      case Direction.none => 0
+      case _ => 0
     }
 
 
@@ -61,6 +62,7 @@ object Model {
       case Direction.right => "right"
       case Direction.down => "down"
       case Direction.left => "left"
+      case _ => "up"
     }
 
     def rotate90: Direction = {
@@ -69,6 +71,7 @@ object Model {
         case Direction.right => Direction.down
         case Direction.down => Direction.left
         case Direction.left => Direction.up
+        case _ =>  Direction.none
       }
     }
 

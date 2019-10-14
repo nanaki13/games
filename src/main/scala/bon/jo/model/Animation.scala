@@ -1,4 +1,4 @@
-package model
+package bon.jo.model
 
 object Animation {
   case class DieWithCount(cnt : Int ,override val shapeTr :Option[Shape => Shape]= None) extends AnimationProp{

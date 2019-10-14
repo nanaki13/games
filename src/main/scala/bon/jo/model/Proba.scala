@@ -1,4 +1,4 @@
-package model
+package bon.jo.model
 import scala.language.postfixOps
 object Proba {
   trait Proba {

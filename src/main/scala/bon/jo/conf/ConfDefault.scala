@@ -1,21 +1,26 @@
-package model
+package bon.jo.conf
 
-import model.Proba.{ProbaEvent, ProbaEvolution}
-import model.Proba.CreatorShortcut._
+import bon.jo.controller.SerUNerOption
+import bon.jo.model.Proba.CreatorShortcut._
+import bon.jo.model.Proba.{ProbaEvent, ProbaEvolution}
+
 import scala.language.postfixOps
 object ConfDefault{
   val startProbaMonstre = (0.5, 100) ~
+  val prod = true
 }
 
 case class ConfDefault(
                         debug: Boolean = false,
                         deltaTAnim: Int = 25,
+                        url: String = if(ConfDefault.prod) "82.254.84.166" else "localhost",
+                        serverPort: Int = if(ConfDefault.prod)  123 else 1234,
                         plateauSize: (Int, Int) = (1400, 1000),
                         nbBullet: Int = 10,
                         var enemyProba: ProbaEvent = ConfDefault.startProbaMonstre,
-
                         newBulletProba: ProbaEvent = (0.5, 100) ~,
                         newNoveProba: ProbaEvent = (0.2, 100) ~,
-                        ennemyEvoution: ProbaEvolution = (0.7, 100) ev ( -1, 0.01)
+                        ennemyEvoution: ProbaEvolution = (0.7, 100) ev ( -1, 0.01),
+                         outFile :  SerUNerOption = SerUNerOption("data.v1.0")
 
                )

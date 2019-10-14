@@ -1,9 +1,9 @@
-package model
+package bon.jo.model
 
 import java.awt.Color
 
-import model.Model.{BasePos, Colored}
-import model.Shapes.{DirAndIdParam, ShapeParam, ShapeParamMultiple, ShapeParamOne, ShapeParamTwo}
+import bon.jo.model.Model.{BasePos, Colored}
+import bon.jo.model.Shapes.{DirAndIdParam, ShapeParam, ShapeParamMultiple, ShapeParamOne, ShapeParamTwo}
 
 object Shape {
   val Circle = 0
