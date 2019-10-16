@@ -4,7 +4,7 @@ import java.io._
 import java.net.Socket
 import java.time.LocalDate
 
-import bon.jo.conf.{Conf, ConfDefault}
+import bon.jo.conf.{Conf, ConfDefault, SerUNerOption, SerUnserUtil}
 import bon.jo.model.Model._
 import bon.jo.model.Shape.ComposedShape
 import bon.jo.model.Shapes.ShapeParamMultiple
@@ -79,7 +79,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
         println(_onlineScores)
         _online = true
       } catch {
-        case e: Exception => _online = false
+        case e: Exception =>  {e.printStackTrace();_online = false}
       }
     }
   }
@@ -206,6 +206,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
   private def writeMaxScore(scoreMax: Score) = {
     implicit val nbJ = _nbJ
     _scores.add(scoreMax)
+    _scores.reduce
     SerUnserUtil.writeObject(_scores)
     if (_online && (scoreMax > _onlineScores.min || _onlineScores.size < 20)) {
       _client.writeScore(scoreMax)

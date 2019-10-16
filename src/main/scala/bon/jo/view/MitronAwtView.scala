@@ -1,25 +1,17 @@
 package bon.jo.view
 
 
-import java.awt.{BorderLayout, Color, Dimension, FlowLayout, Font, Graphics, Graphics2D, Paint}
 import java.awt.event.{ActionListener, KeyEvent, KeyListener}
-import java.awt.geom.{AffineTransform, Ellipse2D, Rectangle2D}
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream, ObjectInputStream, ObjectOutputStream}
-import java.net.{ServerSocket, Socket}
-import java.time.Instant
+import java.awt.geom.{AffineTransform, Ellipse2D}
+import java.awt.{BorderLayout, Color, Dimension, FlowLayout, Font, Graphics, Graphics2D, Paint}
 
-import bon.jo.conf.Conf
-import bon.jo.controller.Score.ScoreTest
-import bon.jo.controller.{ControllerMitron, Score, Scores, SerUNerOption, SerUnserUtil}
-import bon.jo.model.{MitronAthParam, Model}
-import bon.jo.model.Model._
-import bon.jo.model.Shape
-import bon.jo.model.Shape.{Circle, ComposedShape, Point, Rectangle}
-import bon.jo.model.Shapes.{DirAndIdParam, ShapeParamMultiple, ShapeParamOne, ShapeParamTwo}
-import javax.swing.{JButton, JPanel, WindowConstants}
+import bon.jo.controller.ControllerMitron
 import bon.jo.controller.ControllerMitron.game
+import bon.jo.model.Model._
+import bon.jo.model.Shapes.DirAndIdParam
+import bon.jo.model.{MitronAthParam, Model, Score}
+import javax.swing.{JButton, JPanel}
 
-import scala.concurrent.Future
 import scala.util.Random
 
 class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends JPanel with AwtView[MitronAthParam] with Refreh with KeyListener {

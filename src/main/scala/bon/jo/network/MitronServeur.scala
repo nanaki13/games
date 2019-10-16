@@ -3,8 +3,9 @@ package bon.jo.network
 import java.io.{DataInputStream, DataOutputStream}
 import java.net.{ServerSocket, Socket}
 
-import bon.jo.conf.Conf
-import bon.jo.controller.{Score, Scores, SerUNerOption, SerUnserUtil}
+import bon.jo.conf.{Conf, SerUNerOption, SerUnserUtil}
+
+import bon.jo.model.{Score, Scores}
 
 import scala.concurrent.Future
 
@@ -39,9 +40,13 @@ println(s"start on : ${Conf.serverPort}")
 
           implicit val opt: SerUNerOption = Conf.outFile.copy(filePath = Conf.outFile.filePath + "_server")
 
-          def scores = SerUnserUtil.readObject(Scores.empty)
+          def scores = {
+            val a = SerUnserUtil.readObject(Scores.empty)
+            a.reduce
+            a
+          }
 
-          val resultProcessClient: Any = connection.read[String].toType[String] match {
+          val resultProcessClient: Any = connection.read[String].toType match {
             case "maxScore" => {
               val scoresOption = scores
               connection.write(Message(scoresOption)) match {
@@ -60,6 +65,7 @@ println(s"start on : ${Conf.serverPort}")
 
               scoresOption addIfBest sc
               log(s"we have receive this new score : $sc")
+              scoresOption.reduce
               SerUnserUtil.writeObject(scoresOption)
               "OK"
             }

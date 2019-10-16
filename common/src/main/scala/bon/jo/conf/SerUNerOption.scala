@@ -1,3 +1,3 @@
-package bon.jo.controller
+package bon.jo.conf
 
 case class SerUNerOption(filePath : String)

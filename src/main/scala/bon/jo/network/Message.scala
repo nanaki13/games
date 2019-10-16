@@ -1,19 +1,23 @@
 package bon.jo.network
 
-case class Message[T](length: Int, array: Array[Byte]) {
+import bon.jo.conf.SerUnserUtil
+
+case class Message[T](length: Int = 0 , _array: Array[Byte] = null , vall : T = null.asInstanceOf[T]) {
+
+  var value : T = vall
+
   def toObject(implicit des: Array[Byte] => T): Any = {
-    val ret: Any = des(this.array)
+    val ret: Any = des(this._array)
 
   }
 
   def asUtf8: String = {
-    new String(array, "utf-8")
+    new String(_array, "utf-8")
   }
 
-  def toType[T](implicit tr: BytesToT[T]): T = {
-    val ret: T = tr.des(this.array)
-
-    ret
+  def toType(implicit tr: BytesToT[T]): T = {
+    value = tr.des(this._array)
+    value
   }
 }
 
@@ -21,8 +25,7 @@ object Message {
 
 
   def apply[T](t: T)(implicit undes: T => Array[Byte]): Message[T] = {
-    val by = undes(t)
-    val lenght = by.length
-    Message[T](lenght, by)
+    val undess = undes(t)
+    Message[T](undess.size, undess,t)
   }
 }

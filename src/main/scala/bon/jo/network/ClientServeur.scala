@@ -33,7 +33,7 @@ trait ClientServeur extends Log {
     log(s" write length: ${message.length}")
     out.writeInt(message.length)
     log(s" write array")
-    out.write(message.array)
+    out.write(message._array)
     log(s" wait ok ")
     in.readChar()
   }

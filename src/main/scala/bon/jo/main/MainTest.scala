@@ -4,9 +4,9 @@ import java.awt.{Graphics, Graphics2D, Image}
 import java.awt.event.KeyEvent
 import java.awt.geom.Ellipse2D
 
-import bon.jo.controller.{Controller, ControllerMitron, ControllerMitronTestAth, Score}
+import bon.jo.controller.{Controller, ControllerMitron, ControllerMitronTestAth}
 import bon.jo.model.Model.{BasePos, PlateauBase}
-import bon.jo.model.{MitronAthParam, Model, Shapes}
+import bon.jo.model.{MitronAthParam, Model, Score, Shapes}
 import bon.jo.view.{AwtView, MitronAwtView, View}
 import javax.imageio.ImageIO
 import javax.swing.JPanel

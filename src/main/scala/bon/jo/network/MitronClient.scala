@@ -1,6 +1,7 @@
 package bon.jo.network
 
-import bon.jo.controller.{Score, Scores}
+
+import bon.jo.model.{Score, Scores}
 
 trait MitronClient extends ClientServeur {
   implicit val cl = classOf[Scores]

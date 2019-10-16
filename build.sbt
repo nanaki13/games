@@ -1,3 +1,6 @@
+
+import sbt.Keys.libraryDependencies
+
 name := """mitron"""
 val _scalaVersion = "2.13.1"
 lazy val commonSettings = Seq(
@@ -6,20 +9,43 @@ lazy val commonSettings = Seq(
   scalaVersion := _scalaVersion
 )
 
-//lazy val wr = (project in file("works-repository")).settings(
-   // commonSettings,
-    // other settings
- // )
-lazy val root = (project in file(".")).settings(
+
+lazy val test = Seq( "org.scalatest" %% "scalatest" % "3.0.8")
+lazy val repoDep = Seq(   "com.typesafe.slick" %% "slick" % "3.3.2",
+  "com.h2database" % "h2" % "1.4.192"
+  ,"org.postgresql" % "postgresql" %"42.2.5")
+//lazy val global = project
+//  .in(file("glob"))
+//  .settings(commonSettings)
+//  .aggregate(
+//  common
+//  )
+lazy val common = project.settings(
   commonSettings,
-  watchSources ++= (baseDirectory.value / "public/ui" ** "*").get
+
 )
-//.dependsOn(wr)
+lazy val `score-repo` = project.settings(
+  commonSettings,
+  libraryDependencies ++= (test.map(_ % Test) ++ repoDep)
+
+
+).dependsOn(common)
+lazy val `server-mitron` = project.settings(
+  commonSettings,
+  libraryDependencies ++= Seq("com.typesafe.akka" %% "akka-http"   % "10.1.10","com.typesafe.akka" %% "akka-stream" % "2.5.23")
+
+).dependsOn(common)
+lazy val games = (project in file(".")).settings(
+  commonSettings,
+).dependsOn(common)
+
+
 //.enablePlugins(PlayScala)
 enablePlugins(JavaAppPackaging)
 mainClass in Compile := Some("bon.jo.network.MitronServeur")
 resolvers += Resolver.sonatypeRepo("snapshots")
 libraryDependencies += "org.scala-lang" % "scala-compiler" % _scalaVersion
+// or whatever the latest version is
 //libraryDependencies += guice
 //libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
 //libraryDependencies += "com.h2database" % "h2" % "1.4.196"

@@ -1,4 +1,4 @@
-package bon.jo.controller
+package bon.jo.conf
 
 import java.io._
 
@@ -9,7 +9,7 @@ object SerUnserUtil {
     fw.close()
   }
 
-  def readObject[T]( none: T)(implicit fileName: SerUNerOption): T = {
+  def readObject[T](none: T)(implicit fileName: SerUNerOption): T = {
     if ((new File(fileName.filePath)).exists()) {
       val fw = new ObjectInputStream(new FileInputStream(fileName.filePath))
       val ret = fw.readObject().asInstanceOf[T]
@@ -18,5 +18,22 @@ object SerUnserUtil {
     } else {
       none
     }
+  }
+
+  def writeObject_(scores: Product): Array[Byte] = {
+    val o = new ByteArrayOutputStream
+    val fw = new ObjectOutputStream(o)
+    fw.writeObject(scores)
+    fw.flush()
+    val ret = o.toByteArray
+    fw.close()
+    ret
+  }
+
+  def _readObject[T](obj: Array[Byte]): T = {
+
+    val fw = new ObjectInputStream(new ByteArrayInputStream(obj))
+   fw.readObject().asInstanceOf[T]
+
   }
 }

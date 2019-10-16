@@ -1,6 +1,5 @@
 package bon.jo.conf
 
-import bon.jo.controller.SerUNerOption
 import bon.jo.model.Proba.CreatorShortcut._
 import bon.jo.model.Proba.{ProbaEvent, ProbaEvolution}
 

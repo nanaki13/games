@@ -1,4 +1,4 @@
-package bon.jo.controller
+package bon.jo.model
 
 import java.time.LocalDate
 
