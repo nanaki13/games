@@ -6,13 +6,13 @@ import bon.jo.model.Proba.{ProbaEvent, ProbaEvolution}
 import scala.language.postfixOps
 object ConfDefault{
   val startProbaMonstre = (0.5, 100) ~
-  val prod = true
+  val prod = false
 }
 
 case class ConfDefault(
                         debug: Boolean = false,
                         deltaTAnim: Int = 25,
-                        url: String = if(ConfDefault.prod) "82.254.84.166" else "localhost",
+                        url: String = if(ConfDefault.prod) "82.254.84.166" else "http://localhost:8080/scores",
                         serverPort: Int = if(ConfDefault.prod)  123 else 1234,
                         plateauSize: (Int, Int) = (1400, 1000),
                         nbBullet: Int = 10,
@@ -20,6 +20,7 @@ case class ConfDefault(
                         newBulletProba: ProbaEvent = (0.5, 100) ~,
                         newNoveProba: ProbaEvent = (0.2, 100) ~,
                         ennemyEvoution: ProbaEvolution = (0.7, 100) ev ( -1, 0.01),
-                         outFile :  SerUNerOption = SerUNerOption("data.v1.0")
+                        outFile :  SerUNerOption = SerUNerOption("data.v1.1"),
+                        oldOutFile :  SerUNerOption = SerUNerOption("data.v1.0")
 
                )

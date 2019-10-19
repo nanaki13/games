@@ -2,7 +2,7 @@ package bon.jo.network
 
 import java.io._
 
-object ClientServeur {
+object ClientServeurOld {
   implicit def ser[T <: Serializable](t: T): Array[Byte] = {
     val _out = new ByteArrayOutputStream()
     val __out = new ObjectOutputStream(_out)
@@ -21,7 +21,7 @@ object ClientServeur {
   )
 }
 
-trait ClientServeur extends Log {
+trait ClientServeurOld extends Log {
 
 
   def out: DataOutputStream

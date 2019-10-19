@@ -32,11 +32,12 @@ lazy val `score-repo` = project.settings(
 ).dependsOn(common)
 lazy val `server-mitron` = project.settings(
   commonSettings,
-  libraryDependencies ++= Seq("com.typesafe.akka" %% "akka-http"   % "10.1.10","com.typesafe.akka" %% "akka-stream" % "2.5.23")
+  libraryDependencies ++= Seq("com.typesafe.akka" %% "akka-http"   % "10.1.10","com.typesafe.akka" %% "akka-stream" % "2.5.23" )
 
-).dependsOn(common)
+).dependsOn(common,`score-repo`)
 lazy val games = (project in file(".")).settings(
   commonSettings,
+  libraryDependencies ++= Seq("com.typesafe.akka" %% "akka-http"   % "10.1.10","com.typesafe.akka" %% "akka-stream" % "2.5.23" )
 ).dependsOn(common)
 
 

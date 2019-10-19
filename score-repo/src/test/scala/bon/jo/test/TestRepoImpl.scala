@@ -1,5 +1,5 @@
 package bon.jo.test
 
-import bon.{H2, ScoreRepo}
+import bon.{ PostGres, ScoreRepo}
 
-trait TestRepoImpl extends H2 with ScoreRepo
+trait TestRepoImpl extends PostGres with ScoreRepo

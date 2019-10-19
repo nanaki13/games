@@ -1,7 +1,7 @@
 package bon.jo.main
 
 import bon.jo.conf.{Conf, SerUNerOption, SerUnserUtil}
-import bon.jo.model.Scores
+import bon.jo.controller.Scores
 
 import scala.io.StdIn
 

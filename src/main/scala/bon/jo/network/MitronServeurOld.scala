@@ -4,13 +4,13 @@ import java.io.{DataInputStream, DataOutputStream}
 import java.net.{ServerSocket, Socket}
 
 import bon.jo.conf.{Conf, SerUNerOption, SerUnserUtil}
-
-import bon.jo.model.{Score, Scores}
+import bon.jo.controller.Scores
+import bon.jo.model.Score
 
 import scala.concurrent.Future
 
-object MitronServeur extends App with Log {
-  import ClientServeur._
+object MitronServeurOld extends App with Log {
+  import ClientServeurOld._
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -18,13 +18,13 @@ println(s"start on : ${Conf.serverPort}")
   val sc = new ServerSocket(Conf.serverPort)
   implicit val cl = classOf[Scores]
 
-  override def name = "serveur_" + Thread.currentThread()
 
-  class Connection(val clientSocket: Socket) extends ClientServeur {
+
+  class Connection(val clientSocket: Socket) extends ClientServeurOld {
     val in = new DataInputStream(clientSocket.getInputStream)
     val out = new DataOutputStream(clientSocket.getOutputStream)
 
-    override def name = "serveur_client_" + Thread.currentThread()
+
   }
 
   while (true) {

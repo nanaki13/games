@@ -1,12 +1,25 @@
 package bon
 
-import slick.jdbc.meta.MTable
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import java.util.concurrent.TimeUnit
+
+import bon.jo.DoIt
+import slick.jdbc.SQLActionBuilder
+
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.Duration
 import bon.jo.FutureUtil._
 
-trait ScoreRepo extends ScoreRepoTables with WithProfile {
+trait ScoreRepo extends ScoreRepoTables with WithProfile{
+
+
+  implicit def ec: scala.concurrent.ExecutionContext
+
+  def all: Future[Seq[(User, Score)]] = {
+    val res = joinUserScoreResult()
+    db.run(res)
+  }
+
 
   import profile.api._
 
@@ -15,18 +28,37 @@ trait ScoreRepo extends ScoreRepoTables with WithProfile {
     n
   }
 
+  println("loading : " + profileName)
   val db = Database.forConfig(profileName)
 
-  def createTables = {
-    db.run(MTable.getTables).map(v => {
-      val names = v.map(mt => mt.name.name)
-      val createIfNotExist = tables.filter(table =>
-        !names.contains(table.baseTableRow.tableName)).map(_.schema.create)
-      db.run(DBIO.sequence(createIfNotExist))
-    }).flatten
-
+  def createTables: Future[Int] = {
+    db.run(DBIO.sequence(tables.map(_.schema.createIfNotExists)).map(l => l.count(_ => true)))
   }
 
+  def drop(table: String) = {
+    val sql = sqlu"DROP TABLE #${table.toUpperCase} CASCADE"
+    println(sql.statements)
+    sql
+  }
+
+  def dropTaable: Future[Int] = {
+    val big = tables.reverse.map { table => drop(table.baseTableRow.tableName) }
+    val forComp = for {
+      f <- big.map(db.run(_))
+
+    } yield f.map(_ => 1)
+    Future.sequence(forComp).map(_.sum)
+  }
+
+  private object newId  {
+
+    private var id = (DoIt now  db.run(users.map(_.id).max.result)).getOrElse(0)
+
+    def get(): Int = this.synchronized {
+      id += 1
+      id
+    }
+  }
 
   val findByUserName = users.findBy(_.name).applied(_)
 
@@ -37,7 +69,7 @@ trait ScoreRepo extends ScoreRepoTables with WithProfile {
     element
   }
 
-  def createScore(sc: Scores): Future[Scores] = {
+  def createScore(sc: Score): Future[Score] = {
     for {
       maxIdOption <- db.run(scores.map(_.id).max.result)
       maxId = maxIdOption.getOrElse(0)
@@ -55,28 +87,31 @@ trait ScoreRepo extends ScoreRepoTables with WithProfile {
 
   def createUser(uName: String): Future[User] = {
     synchronized {
-      val maxIdOptionOp = ~db.run(users.map(_.id).max.result)
-      val newOne = User(uName, maxIdOptionOp.getOrElse(0) + 1)
+
+      val id = newId.get()
+      println(id)
+      val newOne = User(uName, id)
       db.run((for {
         insertResult <- users += newOne
       } yield {
-        println(maxIdOptionOp, newOne)
+        println(id, newOne)
         if (insertResult == 1) {
           newOne
         } else {
-          throw new Exception("cant create score")
+          throw new Exception("cant create user")
         }
       }).transactionally)
     }
   }
 
   def createUserIfNotExists(uName: String): Future[User] = {
+    println("begin createUserIfNotExists")
     val q = findByUserName(uName)
     for {
       uO <- db.run(q.result.headOption)
       e: User <- uO match {
         case Some(u: User) => println(s"retived : ${u}"); Future.successful(u)
-        case None => println("new One"); createUser(uName)
+        case None => println(s"new One for ${uName}"); createUser(uName)
         case _ => throw new Exception("bad expected response")
       }
     } yield e
@@ -90,28 +125,43 @@ trait ScoreRepo extends ScoreRepoTables with WithProfile {
     * @param s
     * @return
     */
-  def addScore(u: User, s: Scores): Future[(User, Scores, Int)] = {
+  def addScore(u: User, s: Score): Future[(User, Score, Int)] = {
     val opp = for {
-      user <- createUserIfNotExists(u.name)
-      op <- { println(~ db.run(usersScores.result));println(user,s,UserScore(user.id, s.id)); db.run(usersScores += UserScore(user.id, s.id))}
-    } yield (user, s, op)
+      op <- {
+        db.run(usersScores += UserScore(u.id, s.id))
+      }
+    } yield (u, s, op)
     opp
   }
 
-  def getScore(uu: User, game: String): Future[(User, Seq[Scores])] = {
+  private def joinUserScoreFor(uu: User, game: String): Query[ScoresTable, Score, Seq] = for {
+    u <- users
+    us <- usersScores if u.id === us.idUser && u.id === uu.id
+    s <- scores if s.id === us.idScore && s.game === game
+  } yield s
+
+  private def joinUserScoreResult(uu: User, game: String) = joinUserScoreFor(uu, game).result
+
+  private def joinUserScoreFor = for {
+    u <- users
+    us <- usersScores if u.id === us.idUser
+    s <- scores if s.id === us.idScore
+  } yield (u, s)
+
+  private def joinUserScoreResult() = joinUserScoreFor.result
+
+  def getScore(uu: User, game: String): Future[(User, Seq[Score])] = {
     //   val j = users join usersScores on( _.id === _.idUser) join scores on( _._2.idScore === _.id)
-    val joinWall = for {
-      u <- users
-      us <- usersScores if u.id === us.idUser && u.id === uu.id
-      s <- scores if s.id === us.idScore && s.game === game
-    } yield s
-    db.run(joinWall.result).map {
+    val quesry = joinUserScoreResult(uu, game)
+    db.run(quesry).map {
       (uu, _)
     }
   }
 
 
 }
+
+
 
 
 

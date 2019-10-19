@@ -1,21 +1,19 @@
 package bon.jo.controller
 
-import java.io._
-import java.net.Socket
 import java.time.LocalDate
 
 import bon.jo.conf.{Conf, ConfDefault, SerUNerOption, SerUnserUtil}
+import bon.jo.controller.ControllerMitron._
 import bon.jo.model.Model._
 import bon.jo.model.Shape.ComposedShape
 import bon.jo.model.Shapes.ShapeParamMultiple
 import bon.jo.model._
+import bon.jo.network.MitronClient
 import bon.jo.view.View
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
-import ControllerMitron._
-import bon.jo.network.MitronClient
 
 object ControllerMitron {
   implicit val game = "mitron_v0.1"
@@ -43,7 +41,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   private var _bulletCnt = Conf.nbBullet
   private var _userName: String = ""
-  private var _client: MitronClient = null
+  private val _client = MitronClient
 
   def userName: String = {
     _userName
@@ -74,7 +72,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
   def connect = {
     if (_online == false) {
       try {
-        _client = MitronClientImpl()
+
         _onlineScores = _client.getMaxScores
         println(_onlineScores)
         _online = true
@@ -209,7 +207,8 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     _scores.reduce
     SerUnserUtil.writeObject(_scores)
     if (_online && (scoreMax > _onlineScores.min || _onlineScores.size < 20)) {
-      _client.writeScore(scoreMax)
+      val w =   _client.writeScore(scoreMax)
+      println("write : "+w)
     }
 
   }
@@ -227,9 +226,10 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   }
 
-  def readOnlie : Unit = {
+  def readOnlie() : Unit = {
     if (_online) {
       _onlineScores = _client.getMaxScores
+      println(_onlineScores)
     }
   }
 
@@ -398,15 +398,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     }
   }
 
-  case class MitronClientImpl(host: String = Conf.url, port: Int = Conf.serverPort) extends MitronClient {
 
-    val sc = new Socket(host, port)
-    sc.setSoTimeout(5000)
-    val out = new DataOutputStream(sc.getOutputStream)
-    val in = new DataInputStream(sc.getInputStream)
-
-    override def name = "client" + Thread.currentThread()
-  }
 
 
 }

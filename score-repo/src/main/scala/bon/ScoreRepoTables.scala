@@ -1,5 +1,6 @@
 package bon
 
+import java.time.LocalDate
 
 
 trait ScoreRepoTables {
@@ -9,23 +10,25 @@ trait ScoreRepoTables {
 
 
 
-  class ScoresTable(tag: Tag) extends Table[Scores](tag, "SCORE") {
+  class ScoresTable(tag: Tag) extends Table[Score](tag, "score") {
     // This is the primary key column:
     def id = column[Int]("id", O.PrimaryKey)
 
     def score = column[Int]("score")
 
+    def nbPlayer = column[Int]("nb_player")
+
     def game = column[String]("game")
 
-    def when = column[Long]("date")
+    def when = column[LocalDate]("date")
 
     def * =
-      (id, score, game, when) <> (Scores.tupled, Scores.unapply)
+      (id, score,nbPlayer, game, when) <> (Score.tupled, Score.unapply)
   }
 
 
 
-  class UserTable(tag: Tag) extends Table[User](tag, "USER") {
+  class UserTable(tag: Tag) extends Table[User](tag, "user") {
 
     def id = column[Int]("id", O.PrimaryKey)
 
@@ -35,12 +38,13 @@ trait ScoreRepoTables {
       (name,id) <> (User.tupled, User.unapply)
   }
 
-  class UserScoreTable(tag: Tag) extends Table[UserScore](tag, "USER_SCORE") {
+  class UserScoreTable(tag: Tag) extends Table[UserScore](tag, "user_score") {
     // This is the primary key column:
-    def idUser = column[Int]("id_user", O.PrimaryKey)
+    def idUser = column[Int]("id_user")
 
     def idScore = column[Int]("id_score")
 
+    def pk = primaryKey("pk_user_score", (idUser, idScore))
     def user = foreignKey("user_fk", idUser, users)(_.id/*, onUpdate = ForeignKeyAction.Restrict, onDelete = ForeignKeyAction.Cascade*/)
 
     def score = foreignKey("score_fk", idScore, scores)(_.id/*, onUpdate = ForeignKeyAction.Restrict, onDelete = ForeignKeyAction.Cascade*/)

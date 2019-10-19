@@ -3,7 +3,7 @@ package bon.jo.network
 import java.time.Instant
 
 trait Log {
-  def log(text: String) = println(s"${Instant.now()} : ${name} : $text")
+  def log(text: String) = println(s"${Instant.now()} : ${loggerName} : $text")
 
-  def name: String
+  val loggerName: String = this.getClass.getName
 }

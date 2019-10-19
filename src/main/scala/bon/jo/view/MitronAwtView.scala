@@ -12,7 +12,31 @@ import bon.jo.model.Shapes.DirAndIdParam
 import bon.jo.model.{MitronAthParam, Model, Score}
 import javax.swing.{JButton, JPanel}
 
+import scala.concurrent.Future
 import scala.util.Random
+import scala.concurrent.ExecutionContext.Implicits._
+
+ class TimedExecution(val name: String,val cntAndDo: Int,val process : () => Unit) {
+
+
+  var cnt = 0
+  var active = true
+
+  def ifCntOk(): Unit = {
+    if (active) {
+      cnt += 1
+      if (cnt == cntAndDo) {
+        println(s"launch ${name}")
+        cnt = 0
+        Future{
+          process()
+        }
+
+      }
+    }
+
+  }
+}
 
 class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends JPanel with AwtView[MitronAthParam] with Refreh with KeyListener {
 
@@ -28,6 +52,8 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
   val item = ImageIO.read(getClass.getResourceAsStream("/box/box.png"))
   val deltaStart = BasePos(-1, 1)
   var _athParam: MitronAthParam = MitronAthParam.None
+
+  val refreshOnline = new TimedExecution("refresh online",200, controller.readOnlie )
 
 
   def arhParam_=(arhParam: MitronAthParam) = {
@@ -45,9 +71,14 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     warnUserToFnishSate = true
   }
 
-  def actionButton(nbJ : Short): ActionListener ={
-    _ =>  if(!register) {warnUserToFnishSate = false;controller.newGame(nbJ)}else warnUserToFnish
+  def actionButton(nbJ: Short): ActionListener = {
+    _ =>
+      if (!register) {
+        warnUserToFnishSate = false;
+        controller.newGame(nbJ)
+      } else warnUserToFnish
   }
+
   override def init() = {
 
 
@@ -128,7 +159,7 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     //create new Graphics2D instance using Graphics parent
 
     implicit val g2 = g.asInstanceOf[Graphics2D]
-    implicit val nb : Int = controller.nbJ
+    implicit val nb: Int = controller.nbJ
 
     //set color
 
@@ -174,18 +205,19 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     }
     drawATH
     if (controller.pause && controller.gameOver) {
-      val offset_ = BasePos(PlateauBase.w / 2  - 100, (PlateauBase.h / 10))
+      val offset_ = BasePos(PlateauBase.w / 2 - 100, (PlateauBase.h / 10))
       gameOver(g2, offX = offset_)
     }
 
     if (register || controller.pause) {
+      refreshOnline.ifCntOk()
       g2.setFont(fonte)
       if (register) {
         val str = userIn.toString()
         g2.setPaint(defTexColor)
         g2.drawString(s"Enter your name J${cntInputText} : " + str, 200, 200)
-        if(warnUserToFnishSate){
-          g2.drawString(s"tape 'Enter' for validate your score before launching an new game ;-)", 200, 200+ fonte.getSize + 2)
+        if (warnUserToFnishSate) {
+          g2.drawString(s"tape 'Enter' for validate your score before launching an new game ;-)", 200, 200 + fonte.getSize + 2)
         }
       }
 
@@ -202,9 +234,9 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
         val fullsize = l.size
         val brn = if (fullsize > 10) 10 else fullsize
         for (i <- 0 until brn) {
-          g2.drawString(l(i).tuUiString, 600, 350 + i *40)
+          g2.drawString(l(i).tuUiString, 600, 350 + i * 40)
         }
-      }else{
+      } else {
         g2.drawString("No connection", 600, 300)
       }
     }
@@ -225,13 +257,13 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     if (!register) {
       e.getKeyCode match {
         case KeyEvent.VK_DOWN => controller.userWant(Direction.down)
-        case  KeyEvent.VK_UP => controller.userWant(Direction.up)
-        case  KeyEvent.VK_RIGHT => controller.userWant(Direction.right)
-        case  KeyEvent.VK_LEFT => controller.userWant(Direction.left)
-        case KeyEvent.VK_Z if controller.nbJ > 1=> controller.userWant2(Direction.up)
+        case KeyEvent.VK_UP => controller.userWant(Direction.up)
+        case KeyEvent.VK_RIGHT => controller.userWant(Direction.right)
+        case KeyEvent.VK_LEFT => controller.userWant(Direction.left)
+        case KeyEvent.VK_Z if controller.nbJ > 1 => controller.userWant2(Direction.up)
         case KeyEvent.VK_S if controller.nbJ > 1 => controller.userWant2(Direction.down)
-        case KeyEvent.VK_D if controller.nbJ > 1=> controller.userWant2(Direction.right)
-        case KeyEvent.VK_Q if controller.nbJ > 1=> controller.userWant2(Direction.left)
+        case KeyEvent.VK_D if controller.nbJ > 1 => controller.userWant2(Direction.right)
+        case KeyEvent.VK_Q if controller.nbJ > 1 => controller.userWant2(Direction.left)
         case a => println(s"${a} not mapped")
       }
     }
@@ -241,16 +273,16 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     if (!register) {
       e.getKeyCode match {
         case KeyEvent.VK_DOWN => controller.userWant(Direction.none)
-        case  KeyEvent.VK_UP => controller.userWant(Direction.none)
-        case  KeyEvent.VK_RIGHT => controller.userWant(Direction.none)
-        case  KeyEvent.VK_LEFT => controller.userWant(Direction.none)
-        case KeyEvent.VK_Z if controller.nbJ > 1=> controller.userWant2(Direction.none)
-        case KeyEvent.VK_S if controller.nbJ > 1=> controller.userWant2(Direction.none)
-        case KeyEvent.VK_D if controller.nbJ > 1=> controller.userWant2(Direction.none)
+        case KeyEvent.VK_UP => controller.userWant(Direction.none)
+        case KeyEvent.VK_RIGHT => controller.userWant(Direction.none)
+        case KeyEvent.VK_LEFT => controller.userWant(Direction.none)
+        case KeyEvent.VK_Z if controller.nbJ > 1 => controller.userWant2(Direction.none)
+        case KeyEvent.VK_S if controller.nbJ > 1 => controller.userWant2(Direction.none)
+        case KeyEvent.VK_D if controller.nbJ > 1 => controller.userWant2(Direction.none)
         case KeyEvent.VK_Q if controller.nbJ > 1 => controller.userWant2(Direction.none)
         case KeyEvent.VK_SHIFT => controller.userWantShowt()
         case KeyEvent.VK_CONTROL => controller.userWantShowt()
-        case KeyEvent.VK_SPACE if(controller.nbJ > 1) => controller.userWantShowt2()
+        case KeyEvent.VK_SPACE if (controller.nbJ > 1) => controller.userWantShowt2()
         case ee => {
           println(s"$ee not mapped")
         }
@@ -267,6 +299,7 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
   val defTexColor: Paint = Color.magenta
   val fonte = new Font("TimesRoman ", Font.BOLD, 30)
   val fonteMini = new Font("TimesRoman ", Font.BOLD, 13)
+
   def drawATH(implicit g2: Graphics2D): Unit = {
     g2.setPaint(defTexColor)
     g2.setFont(fonteMini);

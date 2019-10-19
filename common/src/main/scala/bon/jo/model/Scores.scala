@@ -1,17 +1,18 @@
-package bon.jo.model
+package bon.jo.controller
 
+import bon.jo.model.Score
 import bon.jo.model.Score.ScoreTest
-import bon.jo.model.Scores._
+
+import Scores._
 
 @SerialVersionUID(5587178536730774879L)
 case class Scores(var scores: Seq[Score]) extends Serializable {
 
-  if(scores.nonEmpty) reduce
+  if (scores.nonEmpty) reduce
 
   def reduce = {
-    val sscores : Iterable[Score] = scores.groupBy(_.who.map(_.toLowerCase)).values.map(_.max(  (x: Score, y: Score) => x.compare(y)))
+    val sscores: Iterable[Score] = scores.groupBy(_.who.map(_.toLowerCase)).values.map(_.max((x: Score, y: Score) => x.compare(y)))
     scores = sscores.toSeq
-    println(s"reduce : $scores")
   }
 
   def bestScoreListe(implicit nbPlayer: Int, game: String): Seq[Score] = scores.filter(nbPlayerAndGame).sorted.reverse

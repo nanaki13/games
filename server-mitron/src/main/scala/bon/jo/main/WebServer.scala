@@ -5,39 +5,27 @@ import java.util.UUID
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.marshalling.{Marshaller, ToEntityMarshaller}
-import akka.http.scaladsl.model.MediaTypes.`application/octet-stream`
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.unmarshalling.{FromEntityUnmarshaller, PredefinedFromEntityUnmarshallers}
 import akka.stream.ActorMaterializer
 import akka.util.ByteString
-import bon.jo.conf.{Conf, SerUNerOption, SerUnserUtil}
-import bon.jo.model.Scores
+import bon.jo.ScoreServiceImpl
+import bon.jo.conf.{Conf, SerUNerOption}
+import bon.jo.model.Score
+import bon.{PostGres, ScoreRepo}
 
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 import scala.io.StdIn
-import scala.util.{Failure, Success}
 
 
 
 
-object MessageSupport {
 
-
-  private val zeroFormatterMarshaller = Marshaller.byteArrayMarshaller(`application/octet-stream`)
-
-  implicit def unmarshallerScore[T <: Product]: FromEntityUnmarshaller[T] = {
-    PredefinedFromEntityUnmarshallers.byteArrayUnmarshaller.map(SerUnserUtil._readObject[T])
-
-  }
-
-  implicit def marshalle[T <: Product]: ToEntityMarshaller[T] =
-    zeroFormatterMarshaller
-      .compose(SerUnserUtil.writeObject_)
+class repoImpl extends PostGres with ScoreRepo   {
+  override implicit def ec: ExecutionContext = scala.concurrent.ExecutionContext.global
 }
-
+case class service( repo: ScoreRepo) extends ScoreServiceImpl
 object WebServer {
   implicit val system = ActorSystem("my-system")
 
@@ -45,13 +33,17 @@ object WebServer {
 
   implicit val opt: SerUNerOption = Conf.outFile.copy(filePath = Conf.outFile.filePath + "_server")
   implicit val materializer = ActorMaterializer()
+  val dbProfile = () => new PostGres {}
 
+
+
+  val repoSerive = new service(new repoImpl)
   def main(args: Array[String]) {
     import MessageSupport._
 
 
     val route: Route = concat(
-      path("max") {
+      path("scores") {
         get {
           {
             extractRequest {
@@ -59,7 +51,7 @@ object WebServer {
                 println(req.headers)
                 req.entity match {
                   case _: HttpEntity.Strict =>
-                    val resp = SerUnserUtil.readObject(Scores.empty)
+                    val resp = repoSerive.allInScores
                     complete {
                       println(resp)
                       resp
@@ -78,11 +70,13 @@ object WebServer {
           // decompress gzipped or deflated requests if required
           decodeRequest {
             // unmarshal with in-scope unmarshaller
-            entity(as[Scores]) { order =>
+            entity(as[Score]) { s =>
               complete {
-                // ... write order to DB
                 println("Order received")
-                order
+               val saved =     repoSerive.save(s)
+                println(s"res from db : $saved")
+                "Ok"
+                // ... write order to DB
               }
             }
           }
@@ -148,26 +142,3 @@ object WebServer {
   }
 }
 
-object TestClient extends App{
-
-  implicit val opt: SerUNerOption = Conf.outFile.copy(filePath = Conf.outFile.filePath)
-  val scores =  SerUnserUtil.readObject[Scores](null)
-
-  val req = HttpRequest(
-    method = HttpMethods.POST,
-    uri = "http://localhost:8080/scores",
-    entity = HttpEntity(ContentTypes.`application/octet-stream`,  SerUnserUtil.writeObject_(scores))
-  )
-  implicit val system = ActorSystem()
-  implicit val materializer = ActorMaterializer()
-  // needed for the future flatMap/onComplete in the end
-  implicit val executionContext = system.dispatcher
-
-  val responseFuture: Future[HttpResponse] = Http().singleRequest(req)
-
-  responseFuture
-    .onComplete {
-      case Success(res) => println(res)
-      case Failure(_)   => sys.error("something wrong")
-    }
-}
