@@ -118,8 +118,14 @@ object WebServer {
           }
         }
       })
-
-    val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
+    println(args)
+    val port = if (args.length > 0){
+      args(0).toInt
+    }else{
+      8080
+    }
+    println(port)
+    val bindingFuture = Http().bindAndHandle(route, "localhost", port)
 
     println(s"Server online at http://localhost:8080/")
 

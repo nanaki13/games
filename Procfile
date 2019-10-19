@@ -1,1 +1,1 @@
-web: target/universal/stage/bin/mitron
+web: target/universal/stage/bin/mitron $PORT
