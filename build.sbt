@@ -1,5 +1,5 @@
 
-import sbt.Keys.libraryDependencies
+import sbt.Keys.{libraryDependencies, mainClass}
 
 name := """mitron"""
 val _scalaVersion = "2.13.1"
@@ -20,6 +20,11 @@ lazy val repoDep = Seq(   "com.typesafe.slick" %% "slick" % "3.3.2",
 //  .aggregate(
 //  common
 //  )
+
+
+resolvers += Resolver.sonatypeRepo("snapshots")
+
+
 lazy val common = project.settings(
   commonSettings,
 
@@ -32,20 +37,28 @@ lazy val `score-repo` = project.settings(
 ).dependsOn(common)
 lazy val `server-mitron` = project.settings(
   commonSettings,
+  mainClass in Compile := Some("bon.jo.main.WebServer"),
   libraryDependencies ++= Seq("com.typesafe.akka" %% "akka-http"   % "10.1.10","com.typesafe.akka" %% "akka-stream" % "2.5.23" )
 
 ).dependsOn(common,`score-repo`)
-lazy val games = (project in file(".")).settings(
+lazy val game = project.settings(
   commonSettings,
   libraryDependencies ++= Seq("com.typesafe.akka" %% "akka-http"   % "10.1.10","com.typesafe.akka" %% "akka-stream" % "2.5.23" )
 ).dependsOn(common)
 
 
-//.enablePlugins(PlayScala)
+lazy val root = (project in file("."))
+  .settings(
+    commonSettings,
+    mainClass in Compile := Some("bon.jo.main.WebServer")
+  )
+  .aggregate(
+    common, `score-repo`,`server-mitron`
+  ).dependsOn(common,`score-repo`,`server-mitron`)
 enablePlugins(JavaAppPackaging)
-mainClass in Compile := Some("bon.jo.main.WebServer")
-resolvers += Resolver.sonatypeRepo("snapshots")
-libraryDependencies += "org.scala-lang" % "scala-compiler" % _scalaVersion
+//.enablePlugins(PlayScala)
+
+
 // or whatever the latest version is
 //libraryDependencies += guice
 //libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
