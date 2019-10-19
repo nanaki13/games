@@ -72,7 +72,7 @@ object WebServer {
             // unmarshal with in-scope unmarshaller
             entity(as[Score]) { s =>
               complete {
-                println("Order received")
+                println("Score received")
                val saved =     repoSerive.save(s)
                 println(s"res from db : $saved")
                 "Ok"

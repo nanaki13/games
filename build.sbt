@@ -43,7 +43,7 @@ lazy val games = (project in file(".")).settings(
 
 //.enablePlugins(PlayScala)
 enablePlugins(JavaAppPackaging)
-mainClass in Compile := Some("bon.jo.network.MitronServeur")
+mainClass in Compile := Some("bon.jo.main.WebServer")
 resolvers += Resolver.sonatypeRepo("snapshots")
 libraryDependencies += "org.scala-lang" % "scala-compiler" % _scalaVersion
 // or whatever the latest version is
