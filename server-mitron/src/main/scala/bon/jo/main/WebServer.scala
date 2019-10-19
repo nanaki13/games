@@ -119,9 +119,9 @@ object WebServer {
         }
       })
 
-    val bindingFuture = Http().bindAndHandle(route, "localhost", 80)
+    val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
 
-    println(s"Server online at http://localhost:80/")
+    println(s"Server online at http://localhost:8080/")
 
   }
 
