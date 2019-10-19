@@ -12,7 +12,7 @@ object ConfDefault{
 case class ConfDefault(
                         debug: Boolean = false,
                         deltaTAnim: Int = 25,
-                        url: String = if(ConfDefault.prod) "http://mitron-server.herokuapp.com:8080/scores" else "http://mitron-server.herokuapp.com:8080/scores",
+                        url: String = if(ConfDefault.prod) "http://mitron-server.herokuapp.com/scores" else "http://mitron-server.herokuapp.com/scores",
                         serverPort: Int = if(ConfDefault.prod)  123 else 1234,
                         plateauSize: (Int, Int) = (1400, 1000),
                         nbBullet: Int = 10,
