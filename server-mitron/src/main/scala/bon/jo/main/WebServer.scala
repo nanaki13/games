@@ -127,7 +127,7 @@ object WebServer {
     println(host,port )
     Http().bindAndHandle(route, host, port)
 
-    println(s"Server online at http://localhost:8080/")
+    println(s"Server online at http://$host:${port}/")
 
   }
 
