@@ -12,9 +12,14 @@ object SerUnserUtil {
   def readObject[T](none: T)(implicit fileName: SerUNerOption): T = {
     if ((new File(fileName.filePath)).exists()) {
       val fw = new ObjectInputStream(new FileInputStream(fileName.filePath))
-      val ret = fw.readObject().asInstanceOf[T]
-      fw.close()
-      ret
+      try{
+        val ret = fw.readObject().asInstanceOf[T]
+
+        ret
+      }catch {
+        case e : Exception => e.printStackTrace();fw.close();none
+      } finally fw.close()
+
     } else {
       none
     }
@@ -33,7 +38,13 @@ object SerUnserUtil {
   def _readObject[T](obj: Array[Byte]): T = {
 
     val fw = new ObjectInputStream(new ByteArrayInputStream(obj))
-   fw.readObject().asInstanceOf[T]
+    try{
+      fw.readObject().asInstanceOf[T]
+
+    }catch {
+      case e : Exception =>  e.printStackTrace();fw.close();null.asInstanceOf[T]
+    } finally fw.close()
+
 
   }
 }

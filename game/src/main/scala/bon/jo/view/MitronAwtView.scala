@@ -2,11 +2,12 @@ package bon.jo.view
 
 
 import java.awt.event.{ActionListener, KeyEvent, KeyListener}
-import java.awt.geom.{AffineTransform, Ellipse2D}
-import java.awt.{BorderLayout, Color, Dimension, FlowLayout, Font, Graphics, Graphics2D, Paint}
+import java.awt.geom.{AffineTransform, Area, Ellipse2D, Rectangle2D}
+import java.awt.{BorderLayout, Color, Dimension, FlowLayout, Font, Graphics, Graphics2D, Paint, Rectangle, Toolkit}
 
+import bon.jo.conf.Conf
 import bon.jo.controller.ControllerMitron
-import bon.jo.controller.ControllerMitron.game
+import bon.jo.controller.ControllerMitron._
 import bon.jo.model.Model._
 import bon.jo.model.Shapes.DirAndIdParam
 import bon.jo.model.{MitronAthParam, Model, Score}
@@ -16,7 +17,7 @@ import scala.concurrent.Future
 import scala.util.Random
 import scala.concurrent.ExecutionContext.Implicits._
 
- class TimedExecution(val name: String,val cntAndDo: Int,val process : () => Unit) {
+class TimedExecution(val name: String, val cntAndDo: Int, val process: () => Unit) {
 
 
   var cnt = 0
@@ -26,9 +27,8 @@ import scala.concurrent.ExecutionContext.Implicits._
     if (active) {
       cnt += 1
       if (cnt == cntAndDo) {
-        println(s"launch ${name}")
         cnt = 0
-        Future{
+        Future {
           process()
         }
 
@@ -41,9 +41,11 @@ import scala.concurrent.ExecutionContext.Implicits._
 class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends JPanel with AwtView[MitronAthParam] with Refreh with KeyListener {
 
 
+
   import javax.imageio.ImageIO
 
-  override val name = "Mirtou"
+  override val name = "Mitron"
+
   val bullet = ImageIO.read(getClass.getResourceAsStream("/bullet.png"))
   val ennemi = ImageIO.read(getClass.getResourceAsStream("/Ships/Dove.png"))
   val user = ImageIO.read(getClass.getResourceAsStream("/Ships/Turtle.png"))
@@ -52,8 +54,27 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
   val item = ImageIO.read(getClass.getResourceAsStream("/box/box.png"))
   val deltaStart = BasePos(-1, 1)
   var _athParam: MitronAthParam = MitronAthParam.None
+  private var _zoom = 1d
 
-  val refreshOnline = new TimedExecution("refresh online",200, controller.readOnlie )
+  def zoom = _zoom
+
+  def zoom_=(zoomP: Double): Unit = {
+
+    val size = new Dimension((PlateauBase.w * zoomP).round.toInt, (PlateauBase.h * zoomP).round.toInt)
+    //    frame.setResizable(true)
+    setPreferredSize(size)
+    setBackground(Color.GREEN)
+
+    _zoom = zoomP
+
+    if (!fullScreen) {
+      frame.pack()
+    }
+    //  frame.pack()
+    //    frame.setResizable(false)
+  }
+
+  val refreshOnline = new TimedExecution("refresh online", 200, controller.readOnlie)
 
 
   def arhParam_=(arhParam: MitronAthParam) = {
@@ -90,7 +111,19 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     south.add(button)
     south.add(button2)
     root.add(south, BorderLayout.SOUTH)
-
+    _zoom = zoomFullScreen
+    about.setText(
+      s"""
+        |
+        |
+        |   <h2>    ${gameText} ${Conf.version}</h2>
+        | Remerciement :
+        | <ul>
+        | <li>A MasterQpuc et à Filex pour leur soutient et le retour d'expérience</li>
+        | <li>A mon amour qui me soutient</li></ul>
+        |
+        | link : <a href="https://www.youtube.com/watch?v=Y4LiZxS1aA0">Surprise</a> &lt; - CTRL + CLICK
+      """.stripMargin)
     super.init()
 
   }
@@ -129,6 +162,8 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
 
   }
 
+  val screen = new Rectangle(0, 0, Toolkit.getDefaultToolkit.getScreenSize.width, Toolkit.getDefaultToolkit.getScreenSize.height)
+  val areaScreen = new Area(screen)
 
   var ff = for {_ <- 1 to 50
   } yield {
@@ -161,9 +196,11 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     implicit val g2 = g.asInstanceOf[Graphics2D]
     implicit val nb: Int = controller.nbJ
 
+    val reverZoom = zoom(g)
+
     //set color
 
-    g2.clearRect(0, 0, PlateauBase.w, PlateauBase.h)
+  //  g2.clearRect(0, 0, PlateauBase.w, PlateauBase.h)
     //set thickness
 
     //draw the line, start x/y coords; end x/y coords;
@@ -194,7 +231,21 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     val blackToGray = new GradientPaint(PlateauBase.w.toFloat - apbs2, PlateauBase.h.toFloat - apbs2, Color.BLACK, (PlateauBase.w / 1.5).toFloat, PlateauBase.h.toFloat, Color.decode("#CB7310"))
     g2.setPaint(blackToGray)
     val planet = new Ellipse2D.Float(PlateauBase.w.toFloat - apbs2, PlateauBase.h.toFloat - apbs2, (PlateauBase.w / 1.5).toFloat, PlateauBase.h.toFloat)
+
     g2.fill(planet)
+
+    if (fullScreen) {
+
+
+      val outter = areaScreen.createTransformedArea(reverZoom)
+      val  inner = new Rectangle2D.Double(0,0, PlateauBase.w , PlateauBase.h)
+      outter.subtract(new Area(inner))
+
+      g2.setColor(Color.black)
+      g2.fill(outter)
+
+    }
+
     if (cntPlanetGrow > 3000) {
       cntPlanetGrow = 0
     }
@@ -264,7 +315,7 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
         case KeyEvent.VK_S if controller.nbJ > 1 => controller.userWant2(Direction.down)
         case KeyEvent.VK_D if controller.nbJ > 1 => controller.userWant2(Direction.right)
         case KeyEvent.VK_Q if controller.nbJ > 1 => controller.userWant2(Direction.left)
-        case a => println(s"${a} not mapped")
+        case _ =>
       }
     }
   }
@@ -283,9 +334,7 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
         case KeyEvent.VK_SHIFT => controller.userWantShowt()
         case KeyEvent.VK_CONTROL => controller.userWantShowt()
         case KeyEvent.VK_SPACE if (controller.nbJ > 1) => controller.userWantShowt2()
-        case ee => {
-          println(s"$ee not mapped")
-        }
+        case _ =>
       }
     } else {
       _keyTyped(e)

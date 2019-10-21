@@ -4,6 +4,9 @@ import java.time.LocalDate
 
 import bon.jo.FutureUtil._
 import bon.ScoreRepo
+import bon.jo.conf.{SerUNerOption, SerUnserUtil}
+import bon.jo.controller.Scores
+import bon.jo.model.Score
 import bon.jo.{DoIt, ScoreServiceImpl}
 import org.scalatest._
 
@@ -52,4 +55,26 @@ object createRepo extends App{
     override implicit def ec:   ExecutionContext  =   scala.concurrent.ExecutionContext.Implicits.global
   }
   DoIt now repoTest.createTables
+}
+
+object AddScore extends App{
+  object repoTest extends TestRepoImpl {
+    override implicit def ec:   ExecutionContext  =   scala.concurrent.ExecutionContext.Implicits.global
+  }
+  case class service( repo: ScoreRepo) extends ScoreServiceImpl
+
+  val ser = new service(repoTest)
+
+// val translate =  SerUnserUtil.readObject(Scores.empty)(SerUNerOption("I:\\work\\process\\mitronServeur\\data.v1.0_server"))
+//  translate.scores.foreach(s => (DoIt now ser.save(s)))
+  DoIt now ser.save(Score("mitron_v0.1",
+    LocalDate.now(),6710,List("MasterQpuc")))
+  DoIt now ser.save(Score("mitron_v0.1",
+    LocalDate.now(),7710,List("Filex")))
+  DoIt now ser.save(Score("mitron_v0.1",
+    LocalDate.now(),4950,List("Jonath")))
+  DoIt now ser.save(Score("mitron_v0.1",
+    LocalDate.now(),1300,List("Ninoo")))
+  DoIt now ser.save(Score("mitron_v0.1",
+    LocalDate.now(),1200,List("Fliles")))
 }

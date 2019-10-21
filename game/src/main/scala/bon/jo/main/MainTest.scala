@@ -11,7 +11,7 @@ import bon.jo.view.{AwtView, MitronAwtView, View}
 import javax.imageio.ImageIO
 import javax.swing.JPanel
 
-object MainTest extends App {
+object MainTest{
 
    class ControllerTest extends ControllerMitronTestAth {
     override var view: View[_, MitronAthParam] = _
@@ -85,7 +85,7 @@ object MainTest extends App {
 
     }
 
-
+    override var zoom: Double = _
   }
 
   val start = System.currentTimeMillis()

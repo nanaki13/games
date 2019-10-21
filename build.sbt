@@ -5,7 +5,7 @@ name := """mitron"""
 val _scalaVersion = "2.13.1"
 lazy val commonSettings = Seq(
   organization := "bon.jo",
-  version := "1.1",
+  version := "1.2",
   scalaVersion := _scalaVersion
 )
 
@@ -41,8 +41,12 @@ lazy val `server-mitron` = project.settings(
   libraryDependencies ++= Seq("com.typesafe.akka" %% "akka-http"   % "10.1.10","com.typesafe.akka" %% "akka-stream" % "2.5.23" )
 
 ).dependsOn(common,`score-repo`)
+
 lazy val game = project.settings(
   commonSettings,
+  mainClass in Compile :=  Some("bon.jo.main.MainMitron"),
+  mainClass in assembly :=  Some("bon.jo.main.MainMitron"),
+  assemblyJarName := "mitron.jar",
   libraryDependencies ++= Seq("com.typesafe.akka" %% "akka-http"   % "10.1.10","com.typesafe.akka" %% "akka-stream" % "2.5.23" )
 ).dependsOn(common)
 

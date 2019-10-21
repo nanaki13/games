@@ -16,7 +16,8 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 object ControllerMitron {
-  implicit val game = "mitron_v0.1"
+  implicit val game : String = "mitron_v0.1"
+  val gameText : String = "Mitron"
 }
 
 trait ControllerMitron extends Controller[MitronAthParam] {
@@ -74,7 +75,6 @@ trait ControllerMitron extends Controller[MitronAthParam] {
       try {
 
         _onlineScores = _client.getMaxScores
-        println(_onlineScores)
         _online = true
       } catch {
         case e: Exception =>  {e.printStackTrace();_online = false}
@@ -85,7 +85,6 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   override def afterLaunch(viewInit: Model => View[_, MitronAthParam]) = {
     maxScore = readLocalAndGetMax()
-    println(s"current max $maxScore")
     _score = Score.None.copy(game)
 
     connect
@@ -208,7 +207,6 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     SerUnserUtil.writeObject(_scores)
     if (_online && (scoreMax > _onlineScores.min || _onlineScores.size < 20)) {
       val w =   _client.writeScore(scoreMax)
-      println("write : "+w)
     }
 
   }
@@ -219,7 +217,6 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     if (_scores.scores.isEmpty) {
       Score.None.copy()
     } else {
-      println(game)
       _scores.max
     }
 
@@ -229,7 +226,6 @@ trait ControllerMitron extends Controller[MitronAthParam] {
   def readOnlie() : Unit = {
     if (_online) {
       _onlineScores = _client.getMaxScores
-      println(_onlineScores)
     }
   }
 

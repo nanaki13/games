@@ -21,6 +21,7 @@ case class ConfDefault(
                         newNoveProba: ProbaEvent = (0.2, 100) ~,
                         ennemyEvoution: ProbaEvolution = (0.7, 100) ev ( -1, 0.01),
                         outFile :  SerUNerOption = SerUNerOption("data.v1.1"),
-                        oldOutFile :  SerUNerOption = SerUNerOption("data.v1.0")
+                        oldOutFile :  SerUNerOption = SerUNerOption("data.v1.0"),
+                        version : String = "1.2"
 
                )
