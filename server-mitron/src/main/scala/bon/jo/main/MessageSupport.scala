@@ -10,6 +10,7 @@ import bon.jo.model.Score
 object MessageSupport {
 
 
+
   private val zeroFormatterMarshaller = Marshaller.byteArrayMarshaller(`application/octet-stream`)
 
   implicit def unmarshallerScores: FromEntityUnmarshaller[Scores] = {

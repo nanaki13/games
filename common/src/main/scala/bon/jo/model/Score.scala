@@ -23,12 +23,18 @@ case class Score(
 object Score{
   val None : Score = Score("",LocalDate.EPOCH,0,Nil)
 
-  object ScoreTest extends App{
+  object ScoreTest {
 
+    val chars: Seq[Char] = ('a' to 'z') ++ ('A' to 'Z') ++ ('1' to '9')
 
+    def nextString(value: 10) = {
+      (for{
+        a <- 0 to 10
+        c = chars(Random.nextInt(chars.length))
+      }yield c).mkString
+    }
 
-
-    def random = Score("Mitron",LocalDate.of(randomYear, randomMonth, randomDay), Random.nextInt(10000),List("Bob"))
+    def random = Score("Mitron",LocalDate.of(randomYear, randomMonth, randomDay), Random.nextInt(10000),List(nextString(10)))
 
     def randomMonth = Random.nextInt(12) + 1
 

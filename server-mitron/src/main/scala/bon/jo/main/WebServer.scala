@@ -12,6 +12,7 @@ import akka.stream.ActorMaterializer
 import akka.util.ByteString
 import bon.jo.ScoreServiceImpl
 import bon.jo.conf.{Conf, SerUNerOption}
+import bon.jo.controller.Scores
 import bon.jo.model.Score
 import bon.{PostGres, ScoreRepo}
 
@@ -26,6 +27,10 @@ class repoImpl extends PostGres with ScoreRepo   {
   override implicit def ec: ExecutionContext = scala.concurrent.ExecutionContext.global
 }
 case class service( repo: ScoreRepo) extends ScoreServiceImpl
+object WebSeverUtil{
+  implicit val templateParam = ScoresHtml.withBootestrap
+  def entity(scores: Scores) : ResponseEntity =  HttpEntity(ScoresHtml.htmlTemplateSorted(scores))
+}
 object WebServer {
   implicit val system = ActorSystem("my-system")
 
@@ -33,6 +38,7 @@ object WebServer {
 
   implicit val opt: SerUNerOption = Conf.outFile.copy(filePath = Conf.outFile.filePath + "_server")
   implicit val materializer = ActorMaterializer()
+
   val dbProfile = () => new PostGres {}
 
 
@@ -43,6 +49,30 @@ object WebServer {
 
 
     val route: Route = concat(
+      path("html"/ "scores") {
+        get {
+          {
+            extractRequest {
+              req =>
+                println(req.headers)
+                req.entity match {
+                  case _: HttpEntity.Strict =>
+                    val resp = repoSerive.allInScores
+
+                    val htmlREsp = resp.map( e  => HttpResponse(entity = WebSeverUtil.entity(e).withContentType(ContentTypes.`text/html(UTF-8)`)))
+                    complete {
+                      htmlREsp
+                    }
+                  case _ =>
+                    complete("Ooops, request entity is not strict!")
+                }
+
+            }
+
+            //   complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to akka-http</h1>"))
+          }
+        }
+      },
       path("scores") {
         get {
           {
@@ -53,7 +83,6 @@ object WebServer {
                   case _: HttpEntity.Strict =>
                     val resp = repoSerive.allInScores
                     complete {
-                      println(resp)
                       resp
                     }
                   case _ =>
@@ -144,4 +173,6 @@ object WebServer {
     }.runFold(0)(_ + _.length)
   }
 }
+
+
 

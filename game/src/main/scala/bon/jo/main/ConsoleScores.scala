@@ -8,7 +8,8 @@ import scala.io.StdIn
 object ConsoleScores extends App {
   implicit val opt: SerUNerOption = Conf.outFile.copy(filePath = Conf.outFile.filePath + "_server")
   val exits = Set(null, "", "exit", "quit")
-  implicit val p : String = Conf.outFile+"_server"
+  implicit val p : String = "./data.v1.0_server"
+  println(p)
   val scores: Scores = SerUnserUtil.readObject(null)
   scores.reduce
   scores.scores.zipWithIndex.sorted.map(e => s"${e._2} => ${e._1}").foreach(println)
