@@ -14,10 +14,11 @@ import bon.jo.view.View
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
+import scala.concurrent.ExecutionContext.Implicits._
 
 object ControllerMitron {
-  implicit val game : String = "mitron_v0.1"
-  val gameText : String = "Mitron"
+  implicit val game: String = "mitron_v0.1"
+  val gameText: String = "Mitron"
 }
 
 trait ControllerMitron extends Controller[MitronAthParam] {
@@ -58,7 +59,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
   }
 
   def userName_=(str: String): Unit = {
-    if(!str.isBlank){
+    if (!str.isBlank) {
       _userName = str
       _score = _score.copy(who = str :: _score.who, game = game)
     }
@@ -74,10 +75,18 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     if (_online == false) {
       try {
 
-        _onlineScores = _client.getMaxScores
-        _online = true
+        _client.getMaxScores.map {
+          e => {
+            _onlineScores = e
+            _online = true
+          }
+        }
+
       } catch {
-        case e: Exception =>  {e.printStackTrace();_online = false}
+        case e: Exception => {
+          e.printStackTrace();
+          _online = false
+        }
       }
     }
   }
@@ -206,7 +215,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     _scores.reduce
     SerUnserUtil.writeObject(_scores)
     if (_online && (scoreMax > _onlineScores.min || _onlineScores.size < 20)) {
-      val w =   _client.writeScore(scoreMax)
+      val w = _client.writeScore(scoreMax)
     }
 
   }
@@ -223,10 +232,16 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   }
 
-  def readOnlie() : Unit = {
-    if (_online) {
-      _onlineScores = _client.getMaxScores
+  def readOnlie(): Unit = {
+
+    _client.getMaxScores.map {
+      e => {
+        _onlineScores = e
+        _online = true
+      }
     }
+
+
   }
 
 
@@ -393,8 +408,6 @@ trait ControllerMitron extends Controller[MitronAthParam] {
       case _ =>
     }
   }
-
-
 
 
 }

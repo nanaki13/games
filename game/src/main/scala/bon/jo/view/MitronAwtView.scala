@@ -288,7 +288,7 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
           g2.drawString(l(i).tuUiString, 600, 350 + i * 40)
         }
       } else {
-        g2.drawString("No connection", 600, 300)
+        g2.drawString(s"No connection, retry in ${refreshOnline.cntAndDo - refreshOnline.cnt}", 600, 300)
       }
     }
 

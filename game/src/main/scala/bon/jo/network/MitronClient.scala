@@ -11,13 +11,14 @@ import bon.jo.conf.{Conf, SerUNerOption, SerUnserUtil}
 import bon.jo.controller.Scores
 import bon.jo.model.Score
 
+import scala.concurrent.Future
+
 object MitronClient extends Log {
 
   implicit def unmarshallerScore: FromEntityUnmarshaller[Scores] = {
     PredefinedFromEntityUnmarshallers.byteArrayUnmarshaller.map(SerUnserUtil._readObject[Scores])
 
   }
-
 
 
   implicit val opt: SerUNerOption = Conf.outFile.copy(filePath = Conf.outFile.filePath)
@@ -27,23 +28,20 @@ object MitronClient extends Log {
   implicit val executionContext = system.dispatcher
 
 
-  def getMaxScores: Scores = {
+  def getMaxScores: Future[Scores] = {
     val req = HttpRequest(uri = Conf.url)
 
-    val response: HttpResponse = DoIt now Http().singleRequest(req)
-    DoIt now Unmarshal(response).to[Scores]
+    Http().singleRequest(req).flatMap(Unmarshal(_).to[Scores])
+
   }
 
-  def writeScore(test: Score) = {
+  def writeScore(test: Score): Future[String] = {
     val req = HttpRequest(
       method = HttpMethods.POST,
       uri = Conf.url,
       entity = HttpEntity(ContentTypes.`application/octet-stream`, SerUnserUtil.writeObject_(test))
     )
-
-
-    val response: HttpResponse = DoIt now Http().singleRequest(req)
-    DoIt now Unmarshal(response).to[String]
+    Http().singleRequest(req).flatMap(Unmarshal(_).to[String])
 
   }
 }

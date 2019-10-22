@@ -6,13 +6,13 @@ import bon.jo.model.Proba.{ProbaEvent, ProbaEvolution}
 import scala.language.postfixOps
 object ConfDefault{
   val startProbaMonstre = (0.5, 100) ~
-  val prod = false
+  val prod = true
 }
 
 case class ConfDefault(
                         debug: Boolean = false,
                         deltaTAnim: Int = 25,
-                        url: String = if(ConfDefault.prod) "http://mitron-server.herokuapp.com/scores" else "http://mitron-server.herokuapp.com/scores",
+                        url: String = if(ConfDefault.prod) "https://mitron-server.herokuapp.com/scores" else "http://localhost:8080/scores",
                         serverPort: Int = if(ConfDefault.prod)  123 else 1234,
                         plateauSize: (Int, Int) = (1400, 1000),
                         nbBullet: Int = 10,
