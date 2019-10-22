@@ -56,10 +56,10 @@ object ScoresHtml {
        |    <tr>
        |
        |      <th scope="col">#</th>
-       |      <th scope="col">game</th>
+       |      <th scope="col">Game</th>
+       |      <th scope="col">Score</th>
        |      <th scope="col">Player</th>
-       |      <th scope="col">score</th>
-       |      <th scope="col">date</th>
+       |      <th scope="col">Date</th>
        |    </tr>
        |  </thead>
        |
@@ -71,14 +71,15 @@ object ScoresHtml {
   }
 
   def htmlIn(scores: Scores): String = {
-    scores.scores.map(html).mkString("\n")
+
+    scores.scores.zipWithIndex.map( e=> html(e._1,e._2+1)).mkString("\n")
   }
 
-  def html(score: Score): String = {
+  def html(score: Score,cnt : Int): String = {
 
     s"""
        | <tr>
-       |      <th scope="row">1</th>
+       |      <th scope="row">${cnt}</th>
        |      <th scope="row">${score.game}</th>
        |      <td>${score.value}</td>
        |      <td>${score.who.mkString(" ")}</td>
