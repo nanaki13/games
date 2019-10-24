@@ -171,7 +171,7 @@ object WebServer {
           }
         }
       })
-    println(args)
+
     val (host,port )= if (args.length > 0){
       ("0.0.0.0",args(0).toInt)
     }else{

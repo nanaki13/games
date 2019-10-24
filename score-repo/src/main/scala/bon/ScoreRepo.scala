@@ -1,19 +1,27 @@
 package bon
 
 
-import java.util.concurrent.TimeUnit
+import java.io.PrintWriter
+import java.sql.{Connection, DriverManager}
+import java.util.logging.Logger
 
 import bon.jo.DoIt
-import slick.jdbc.SQLActionBuilder
-
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration.Duration
 import bon.jo.FutureUtil._
+import com.typesafe.config.ConfigFactory
+import javax.sql.DataSource
 
-trait ScoreRepo extends ScoreRepoTables with WithProfile{
+import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
+
+
+
+trait ScoreRepo extends ScoreRepoTables with WithProfile {
+
 
 
   implicit def ec: scala.concurrent.ExecutionContext
+
+  val db = initDb()
 
   def all: Future[Seq[(User, Score)]] = {
     val res = joinUserScoreResult()
@@ -29,7 +37,26 @@ trait ScoreRepo extends ScoreRepoTables with WithProfile{
   }
 
   println("loading : " + profileName)
-  val db = Database.forConfig(profileName)
+
+  def mStrin(k: String, v: AnyRef): (String, String) = (k, v.toString)
+
+
+  def initDb() =  if (urlDb.isEmpty) {
+
+    Database.forConfig(profileName)
+  } else {
+    val conf = ConfigFactory.load
+    println("initial db config = "+conf.getConfig(profileName))
+    val confMap = conf.getObject(profileName).unwrapped().asScala.map((e: (String, AnyRef)) => {
+      mStrin(e._1, e._2)
+    })
+    confMap += ("url" -> urlDb.get)
+    confMap += ("user" -> userDb.get)
+    confMap += ("password" -> passwordDb.get)
+    val compConf = ConfigFactory.parseMap(Map(profileName -> confMap.asJava).asJava)
+    Database.forConfig(profileName, compConf)
+  }
+
 
   def createTables: Future[Int] = {
     db.run(DBIO.sequence(tables.map(_.schema.createIfNotExists)).map(l => l.count(_ => true)))
@@ -50,9 +77,9 @@ trait ScoreRepo extends ScoreRepoTables with WithProfile{
     Future.sequence(forComp).map(_.sum)
   }
 
-  private object newId  {
+  private object newId {
 
-    private var id = (DoIt now  db.run(users.map(_.id).max.result)).getOrElse(0)
+    private var id = (DoIt now db.run(users.map(_.id).max.result)).getOrElse(0)
 
     def get(): Int = this.synchronized {
       id += 1
