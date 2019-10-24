@@ -15,7 +15,7 @@ import bon.jo.conf.{Conf, SerUNerOption}
 import bon.jo.controller.Scores
 import bon.jo.model.Score
 import bon.{PostGres, ScoreRepo}
-
+import scala.jdk.CollectionConverters._
 import scala.concurrent.ExecutionContext
 import scala.io.StdIn
 
@@ -30,6 +30,7 @@ case class service( repo: ScoreRepo) extends ScoreServiceImpl
 object WebSeverUtil{
   implicit val templateParam = ScoresHtml.withBootestrap
   def entity(scores: Scores) : ResponseEntity =  HttpEntity(ScoresHtml.htmlTemplateSorted(scores))
+  def entity(str: String) : ResponseEntity =  HttpEntity(ScoresHtml.html(str))
 }
 object WebServer {
   implicit val system = ActorSystem("my-system")
@@ -49,6 +50,29 @@ object WebServer {
 
 
     val route: Route = concat(
+      path("html"/ "xyzrtaez") {
+        get {
+          {
+            extractRequest {
+              req =>
+                println(req.headers)
+                req.entity match {
+                  case _: HttpEntity.Strict =>
+
+                    val htmlREsp =  HttpResponse(entity = HttpEntity(HtmlTemplateSys.template.toHTMLString).withContentType(ContentTypes.`text/html(UTF-8)`))
+                    complete {
+                      htmlREsp
+                    }
+                  case _ =>
+                    complete("Ooops, request entity is not strict!")
+                }
+
+            }
+
+            //   complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to akka-http</h1>"))
+          }
+        }
+      },
       path("html"/ "scores") {
         get {
           {
