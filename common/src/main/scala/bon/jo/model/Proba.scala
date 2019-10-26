@@ -1,30 +1,33 @@
 package bon.jo.model
+
 import scala.language.postfixOps
+
 object Proba {
+
   trait Proba {
-    def double:Double
+    def double: Double
 
     def draw: Boolean
 
   }
 
-  trait ProbaEvolution extends ProbaAndDo[ProbaEvent,ProbaEvent] {
-    override def doIfOK(p: ProbaEvent):ProbaEvent = {
+  sealed trait ProbaEvolution extends ProbaAndDo[ProbaEvent, ProbaEvent] {
+    override def doIfOK(p: ProbaEvent): ProbaEvent = {
 
-      val np = if(p.periodNb+dCount > 0 ) p.periodNb+dCount else 1
-      val ret =   ProbaEventImpl(p.proba.double+dProba,np)
+      val np = if (p.periodNb + dCount > 0) p.periodNb + dCount else 1
+      val ret = ProbaEventImpl(p.proba.double + dProba, np)
       ret
     }
 
-    def dCount: Int
+    def dCount: Double
 
     def dProba: Double
   }
 
   class ProbaEvolutionImpl(proba: Proba,
-                           periodNb: Int, override val dCount: Int, override val dProba: Double) extends ProbaEventImpl(proba, periodNb) with ProbaEvolution
+                           periodNb: Int, override val dCount: Double, override val dProba: Double) extends ProbaEventImpl(proba, periodNb) with ProbaEvolution
 
-  trait ProbaAndDo[-P, +R] extends ProbaEventBase[Proba] {
+  sealed trait ProbaAndDo[-P, +R] extends ProbaEventBase[Proba] {
 
     def doIfOK(p: P): R
 
@@ -46,7 +49,7 @@ object Proba {
     implicit class Creators(tp: (Double, Int)) {
       implicit def ~ : ProbaEvent = ProbaEventImpl.apply(tp._1, tp._2)
 
-      implicit def ev( dCount: Int, dProba: Double): ProbaEvolution = new ProbaEvolutionImpl(tp._1 p, tp._2, dCount, dProba)
+      implicit def ev(dCount: Double, dProba: Double): ProbaEvolution = new ProbaEvolutionImpl(tp._1 p, tp._2, dCount, dProba)
     }
 
     implicit class CreatorsFromOne(tp: Double) {
@@ -57,7 +60,7 @@ object Proba {
   }
 
   object ProbaEventImpl {
-    def apply(proba: Double, periodCount: Int): ProbaEvent = {
+    def apply(proba: Double, periodCount: Double): ProbaEvent = {
       new ProbaEventImpl(ProbaImpl(proba), periodCount)
     }
 
@@ -65,21 +68,29 @@ object Proba {
   }
 
   case class ProbaEventImpl(proba: Proba,
-                            periodNb: Int) extends ProbaEventBase[Proba] with ProbaEvent
+                            periodNb: Double) extends ProbaEventBase[Proba] with ProbaEvent
 
-  trait ProbaEvent extends ProbaEventBase[Proba]
+  sealed trait ProbaEvent extends ProbaEventBase[Proba]
 
-  trait ProbaEventBase[T <: Proba] {
+  sealed trait ProbaEventBase[T <: Proba] {
     def proba: Proba
 
-    def periodNb: Int
+    def periodNb: Double
 
     def draw(cntPerdiod: Int): Boolean = {
-      if (cntPerdiod % periodNb == 0) {
+      if (cntPerdiod % periodNb.round == 0) {
         proba.draw
       } else {
         false
       }
     }
+
+    def drawAndDo(cntPerdiod: Int)(f: () => Unit): Unit = {
+      if (draw(cntPerdiod)) {
+        f()
+      }
+    }
   }
+
+
 }

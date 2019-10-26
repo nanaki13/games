@@ -12,7 +12,7 @@ import org.scalatest._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
-
+import  bon.jo.ImpliciErroMessage._
 class TestService extends FlatSpec with Matchers {
 
   object repoTest extends TestRepoImpl {
@@ -33,8 +33,9 @@ class TestService extends FlatSpec with Matchers {
       123,
       List("bob","roger")
     )
-    val res = DoIt now service.save(scoreInput)
 
+    val ress = DoIt now service.save(scoreInput)
+    val res = ress.get
     res._2.map(_.name).toSet should be(Set("bob","roger"))
     res._1.game should be ("mitron")
     res._1.score should be (123)

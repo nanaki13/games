@@ -5,7 +5,7 @@ name := """mitron"""
 val _scalaVersion = "2.13.1"
 lazy val commonSettings = Seq(
   organization := "bon.jo",
-  version := "1.2",
+  version := "1.3",
   scalaVersion := _scalaVersion
 )
 

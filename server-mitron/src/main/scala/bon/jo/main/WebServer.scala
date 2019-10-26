@@ -15,9 +15,8 @@ import bon.jo.conf.{Conf, SerUNerOption}
 import bon.jo.controller.Scores
 import bon.jo.model.Score
 import bon.{PostGres, ScoreRepo}
-import scala.jdk.CollectionConverters._
+
 import scala.concurrent.ExecutionContext
-import scala.io.StdIn
 
 
 
@@ -126,11 +125,16 @@ object WebServer {
             entity(as[Score]) { s =>
               complete {
                 println("Score received")
+                implicit val errorMessage= new StringBuilder
                val saved =     repoSerive.save(s)
                 println(s"res from db : $saved")
-                "Ok"
+                saved.map{
+                  case Some(u) => "Ok"
+                  case _ => errorMessage.toString()
+                }
                 // ... write order to DB
               }
+
             }
           }
         }

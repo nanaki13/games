@@ -30,9 +30,7 @@ object MitronClient extends Log {
 
   def getMaxScores: Future[Scores] = {
     val req = HttpRequest(uri = Conf.url)
-
     Http().singleRequest(req).flatMap(Unmarshal(_).to[Scores])
-
   }
 
   def writeScore(test: Score): Future[String] = {

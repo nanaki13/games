@@ -13,6 +13,9 @@ import java.awt.{Dimension, Toolkit}
 import java.io.IOException
 import java.net.URL
 
+import bon.jo.controller.Controller
+
+import scala.concurrent.ExecutionContext.Implicits._
 import javax.swing.event.{HyperlinkEvent, HyperlinkListener}
 import javax.swing.{JButton, JCheckBoxMenuItem, JEditorPane, JFrame, JLabel, JMenu, JMenuBar, JMenuItem, JOptionPane, JPanel, JTextArea, JTextPane, WindowConstants}
 
@@ -27,7 +30,7 @@ trait AwtView[AthParam_ <: AthParam] extends View[Graphics2D, AthParam_] with Ke
 
   about.addHyperlinkListener((e: HyperlinkEvent) => {
     val clickedURL = e.getURL
-    if (e.getEventType == HyperlinkEvent.EventType.ACTIVATED) try{
+    if (e.getEventType == HyperlinkEvent.EventType.ACTIVATED) try {
       fullScreenItem.setState(false)
       BrowserLauncher.openURL(clickedURL.toString)
     }
@@ -36,14 +39,14 @@ trait AwtView[AthParam_ <: AthParam] extends View[Graphics2D, AthParam_] with Ke
         e1.printStackTrace()
     }
   })
-//  about.setContentType("text/html");
-//
-//  about.setEditable(false);
-//  about.setBackground(null);
-//  about.setBorder(null);
+  //  about.setContentType("text/html");
+  //
+  //  about.setEditable(false);
+  //  about.setBackground(null);
+  //  about.setBorder(null);
 
-  about. putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true);
- // about. setFont(DEFAULT_FONT);
+  about.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true);
+  // about. setFont(DEFAULT_FONT);
 
   val gameMenu = new JMenu("Game")
   menuBar.add(gameMenu)
@@ -57,7 +60,7 @@ trait AwtView[AthParam_ <: AthParam] extends View[Graphics2D, AthParam_] with Ke
     val f = new JFrame("About")
     f.getContentPane.add(about)
 
-    f.setPreferredSize(new Dimension(300,300))
+    f.setPreferredSize(new Dimension(300, 300))
     f.pack()
     f.setLocationRelativeTo(frame)
     f.setIconImage(image)
@@ -208,6 +211,7 @@ trait AwtView[AthParam_ <: AthParam] extends View[Graphics2D, AthParam_] with Ke
   }
 
   var cntInputText: Int = 1
+  var userMessage: String
 
   def _keyTyped(e: KeyEvent): Unit = {
 
@@ -223,12 +227,18 @@ trait AwtView[AthParam_ <: AthParam] extends View[Graphics2D, AthParam_] with Ke
           userIn.setLength(userIn.length() - 1)
         }
       } else {
-        cntInputText += 1
+
         controller.userName = userIn.toString()
         userIn.setLength(0)
-        register = controller.continuRegisterUserName
-        if (!register) {
-          cntInputText = 1
+        controller.continuRegisterUserName.map { e =>
+          if (e == (true, "continu")) {
+            cntInputText += 1
+          } else {
+            cntInputText = 1
+          }
+          register = e._1
+          userMessage = e._2
+          e
         }
       }
     }
@@ -243,20 +253,25 @@ trait AwtView[AthParam_ <: AthParam] extends View[Graphics2D, AthParam_] with Ke
     g2.setColor(e.awtColor)
     e match {
       case PlateauBase => g2.draw(new Rectangle2D.Double(PlateauBase.x, PlateauBase.y, PlateauBase.w, PlateauBase.h))
-      case BaseModel(p, Shape(Point, pa: ShapeParamOne[_]), _, _, _) => pa.x match {
+      case BaseModel(p, Shape(Point, pa: ShapeParamOne[_]), _, _, _, _) => pa.x match {
         case i: Int => g2.fill(new Rectangle2D.Double(p.x + offX.x - i / 2d, p.y + offX.y - i / 2d, i, i))
       }
-      case BaseModel(p, Shape(Rectangle, pa: ShapeParamTwo), _, _, _) => g2.fill(new Rectangle2D.Double(p.x + offX.x - pa.x / 2d, p.y + offX.y - pa.y / 2d, pa.x, pa.y))
-      case BaseModel(p, Shape(Circle, pa: ShapeParamOne[_]), _, _, _) => pa.x match {
+      case BaseModel(p, Shape(Rectangle, pa: ShapeParamTwo), _, _, _, _) => g2.fill(new Rectangle2D.Double(p.x + offX.x - pa.x / 2d, p.y + offX.y - pa.y / 2d, pa.x, pa.y))
+      case BaseModel(p, Shape(Circle, pa: ShapeParamOne[_]), _, _, _, _) => pa.x match {
         case int: Int => {
           val d = 2 * int
+
           g2.fill(new Ellipse2D.Double(p.x + offX.x - int, p.y + offX.y - int, d, d))
         }
       }
-      case BaseModel(p, Shape(Shape.Image, pa: DirAndIdParam), _, _, _) => {
+      case BaseModel(p, Shape(Shape.Image, pa: DirAndIdParam), gr, _, _, _) => {
         drawImage(e, pa)
+//        if(gr == Group.User){
+//          val pre = Controller.predict(e,PlateauBase,100)
+//          drawImage(e._copy(pre), pa)
+//        }
       }
-      case BaseModel(p, Shape(ComposedShape, pa: ShapeParamMultiple), _, _, _) => {
+      case BaseModel(p, Shape(ComposedShape, pa: ShapeParamMultiple), _, _, _, _) => {
         pa.inner.foreach { e =>
           implicit val offset = BasePos(p.x, p.y)
           draw(e)
@@ -270,7 +285,14 @@ trait AwtView[AthParam_ <: AthParam] extends View[Graphics2D, AthParam_] with Ke
           case Shape(Circle, pa: ShapeParamOne[_]) => {
             pa.x match {
               case r: Int => {
+                val rD = 2 * r.toFloat
                 val d = 2 * r
+
+                val dist = Array(0.97f*(rD*rD*rD)/(702*702*702),0.98f*((rD*rD)/(702*702)),1.0f*(rD/702));
+                val colors = Array( Color.decode("#e3381e"), Color.decode("#ba3622"),  Color.decode("#1f0d16"))
+//              val colors = Array( Color.RED, Color.BLUE,  Color.GREEN)
+                val blackToGray = new RadialGradientPaint(e.x + offX.x + offX.x , e.y + offX.y + offX.x ,r, dist, colors)
+                g2.setPaint(blackToGray)
                 g2.fill(new Ellipse2D.Double(e.x + offX.x - r, e.y + offX.y - r, d, d))
               }
 

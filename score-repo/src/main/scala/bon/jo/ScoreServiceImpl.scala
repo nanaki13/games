@@ -1,30 +1,36 @@
 package bon.jo
 
 
-
 import bon.jo.controller.Scores
 import bon.{Score, ScoreRepo, ScoreUtil, User}
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
-
+import bon.jo.model.validator.Validator.valid
 trait ScoreServiceImpl extends ScoreService {
 
 
   def repo: ScoreRepo
 
-  def save(s: ScoresType): Future[(Score, Seq[User])] = {
+
+  def save(s: ScoresType)(implicit errorMessae : StringBuilder): Future[Option[(Score, Seq[User])]] = {
     println("begin save")
-    val users = s.who
-    val score = Score(0, s.value, s.who.size, s.game, s.when)
 
-    val createUansdS = for {
-      newUsers <- Future.sequence(users.map(repo.createUserIfNotExists(_)))
-      savedScore <- repo.createScore(score)
-      ret <- Future.sequence(newUsers.map(repo.addScore(_, savedScore)))
-    } yield ret
+    if (valid(s)) {
+      val users = s.who
+      val score = Score(0, s.value, s.who.size, s.game, s.when)
 
-    createUansdS.map(groupByScoreFirst)
+      val createUansdS = for {
+        newUsers <- Future.sequence(users.map(repo.createUserIfNotExists(_)))
+        savedScore <- repo.createScore(score)
+        ret <- Future.sequence(newUsers.map(repo.addScore(_, savedScore)))
+      } yield ret
+
+      createUansdS.map(groupByScoreFirst).map(Some(_))
+    } else {
+      Future.successful(None)
+    }
+
   }
 
   def all: Future[Iterator[ScoresType]] = repo.all.map {
@@ -44,7 +50,7 @@ trait ScoreService {
   type ScoresType = bon.jo.model.Score
 
 
-  def save(s: ScoresType): Future[(Score, Seq[User])]
+  def save(s: ScoresType)(implicit errorMessae : StringBuilder):  Future[Option[(Score, Seq[User])]]
 
   def all: Future[Iterator[ScoresType]]
 

@@ -23,16 +23,19 @@ object MainTest{
 
     override def notPauseProcess: Unit = {}
 
-     override def continuRegisterUserName: Boolean = false
+     override def continuRegisterUserName = ???
+
+//     override def predict(me: Model.ModelElement, after: Int): Model.Pos = ???
    }
   class ViestTest(override val controller : ControllerTest) extends JPanel with AwtView[MitronAthParam] {
+    override var userMessage : String = ""
     override def name: String = "test"
 
     override def image: Image = ImageIO.read(getClass.getResourceAsStream("/Ships/Turtle.png"))
 
     override def drawImage(e: Model.ModelElement, pa: Shapes.DirAndIdParam)(implicit g2d: Graphics2D): Unit ={}
 
-    var _athParam: MitronAthParam = MitronAthParam(Score.None, Score.None, 0)
+    var _athParam: MitronAthParam = MitronAthParam(Score.None, Score.None, 0,0)
 
 
     def arhParam_=(arhParam: MitronAthParam) = {
@@ -86,6 +89,8 @@ object MainTest{
     }
 
     override var zoom: Double = _
+
+
   }
 
   val start = System.currentTimeMillis()

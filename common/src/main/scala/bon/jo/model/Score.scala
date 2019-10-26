@@ -11,7 +11,7 @@ case class Score(
                   when: LocalDate,
                   value: Int,
                   who:List[String]
-                ) extends Ordered[Score] {
+                ) extends Ordered[Score]{
   override def compare(that: Score): Int = this.value - that.value
   def nbJ: Int = who.size
   def  + (v:Int) : Score = this.copy(value = this.value+v)

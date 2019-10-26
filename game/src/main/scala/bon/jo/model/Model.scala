@@ -3,8 +3,9 @@ package bon.jo.model
 import java.awt.Color
 
 import bon.jo.conf.Conf
+import bon.jo.controller.UserPower
 import bon.jo.model.Animation.{AnimationProp, DieWithCount}
-import bon.jo.model.Model.{BaseModel, ModelElement}
+import bon.jo.model.Model.ModelElement
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -16,26 +17,66 @@ trait Model {
   def player1: ModelElement
 
   def player2: ModelElement
+
+  var player1Power: List[UserPower]
+  var player2Power: List[UserPower]
 }
 
 object Model {
 
-  class Buulet(pos: Pos, speed: Speed, option :Option[AnimationProp]= Some(DieWithCount(2*100))) extends BaseModel(pos = pos
-    , shape = Shapes.Image("bullet", Direction.right, 50, 50),
-    speed = speed,
-    group = Group.Bullet,option =option){
-    override def _copy(pos_ : Pos, speed_ : Speed): ModelElement = new Buulet(pos = pos_, speed = speed_,option=option)
+  trait SelfControl {
+    def updatePos(): Unit
   }
 
-  class BuletItem(pos: Pos, option :Option[AnimationProp]= Some(DieWithCount(5*100))) extends BaseModel(pos = pos
-    , shape = Shapes.Image("item", Direction.up, 20, 20),
-    group = Group.Item,option =option){
-    override def _copy(pos_ : Pos, speed_ : Speed): ModelElement = new BuletItem(pos = pos_,option=option)
+
+  def follow(follower: Pos, pos: ModelElement): Pos = {
+    val delta: Pos = pos - follower
+    val deltaNoramlize: Pos = Pos.normalize(4, delta)
+    val ret = follower + deltaNoramlize
+    for(_ <- 1 to 5) println()
+    ret
   }
-  class NovaItem(pos: Pos, option :Option[AnimationProp]= Some(DieWithCount(5*100))) extends BaseModel(pos = pos
+
+
+  class HomingBullet(private var _pos: Pos, target: ModelElement, val cntUpdate: Int = 1, option: Option[AnimationProp] = Some(DieWithCount(2 * 100))) extends BaseModel(pos = _pos
+    , shape = Shapes.Image("ennemyBullet", Direction.right, 30, 30),
+    speed = Speed.None,
+    group = Group.BulletToPlayer, option = option) with SelfControl {
+    println("new missile")
+    private var _cnt = 0;
+
+    override def _copy(posToCopy: Pos, speed_ : Speed): ModelElement = ???
+
+
+    override def updatePos(): Unit = {
+      _cnt += 1
+      if (_cnt == cntUpdate) {
+        _pos = follow(_pos, target)
+        pos = _pos
+        _cnt = 0
+      }
+
+    }
+  }
+
+
+  class Buulet(pos: Pos, speed: Speed, option: Option[AnimationProp] = Some(DieWithCount(2 * 100))) extends BaseModel(pos = pos
+    , shape = Shapes.Image("bullet", Direction.right, 50, 50),
+    speed = speed,
+    group = Group.Bullet, option = option) {
+    override def _copy(pos_ : Pos, speed_ : Speed): ModelElement = new Buulet(pos = pos_, speed = speed_, option = option)
+  }
+
+  class BuletItem(pos: Pos, option: Option[AnimationProp] = Some(DieWithCount(5 * 100))) extends BaseModel(pos = pos
     , shape = Shapes.Image("item", Direction.up, 20, 20),
-    group = Group.Item, option =option){
-    override def _copy(pos_ : Pos, speed_ : Speed): ModelElement = new NovaItem(pos = pos_,option=option)
+    group = Group.Item, option = option) {
+    override def _copy(pos_ : Pos, speed_ : Speed): ModelElement = new BuletItem(pos = pos_, option = option)
+  }
+
+  class NovaItem(pos: Pos, option: Option[AnimationProp] = Some(DieWithCount(5 * 100))) extends BaseModel(pos = pos
+    , shape = Shapes.Image("item", Direction.up, 20, 20),
+    group = Group.Item, option = option) {
+    override def _copy(pos_ : Pos, speed_ : Speed): ModelElement = new NovaItem(pos = pos_, option = option)
   }
 
   object Group {
@@ -44,7 +85,9 @@ object Model {
     val User = 2
     val Source = 3
     val Item = 4
-    val Background = 4
+    val Background = 5
+    val BulletToPlayer = 6
+
   }
 
   case class Direction(val direction: Short) {
@@ -71,7 +114,7 @@ object Model {
         case Direction.right => Direction.down
         case Direction.down => Direction.left
         case Direction.left => Direction.up
-        case _ =>  Direction.none
+        case _ => Direction.none
       }
     }
 
@@ -99,26 +142,16 @@ object Model {
     def color: String = "#000000"
   }
 
-  trait ModelElement extends Pos with Colored with AnimationProp {
-    def _copy(pos: Pos, speed: Speed = Speed.None): ModelElement
 
-    def group: Int
 
-    var speed: Speed
 
-    var pos: Pos
-
-    def x: Int = pos.x
-
-    def y: Int = pos.y
-
-    def shape: Shape
-
-    override def awtColor: Color = shape.awtColor
-
-  }
-
+  implicit def basePosBuilder(x : Int , y : Int) = BasePos(x,y)
   object Pos {
+    def normalize(value: Int, pos: Pos): Pos = {
+      val nrm = pos.nrm.toFloat
+      BasePos(((value.toFloat / nrm) * pos.x).round, ((value.toFloat / nrm) * pos.y).round)
+    }
+
     val org: Pos = BasePos(0, 0)
 
     def random(w: Int, h: Int): Pos = BasePos(Random.nextInt(w), Random.nextInt(h))
@@ -133,10 +166,14 @@ object Model {
   }
 
   trait Pos {
+    def -(pos: Pos) = BasePos(this.x - pos.x, this.y - pos.y)
+
     def near(pos: Pos, value: Double) = Pos.nrm(this, pos) < value
 
-    def nrm = {
-      scala.math.sqrt(x * x + y * y)
+    def nrm: Double = {
+      val xx =(x * x)
+      val yy =(y * y)
+      scala.math.sqrt((xx + yy))
     }
 
     def trY: Pos
@@ -149,7 +186,7 @@ object Model {
 
     def +(pos: Pos): Pos = BasePos(this.x + pos.x, this.y + pos.y)
 
-    def *[T <: Pos](value: Float)(implicit builder: (Int, Int) => T): T = builder(x, y)
+    def *[T <: Pos](value: Float)(implicit builder: (Int, Int) => T): T = builder( (x.toFloat * value).round, (y.toFloat * value).round)
   }
 
   object Org extends BasePos(0, 0)
@@ -170,11 +207,12 @@ object Model {
     }
   }
 
-  class CircleGrow(var _pos: Pos = Pos.org, maxGrow: Double,   grow :Boolean = true, shapeIni: Shape = Shapes.Circle(10), var _speed: Speed = Speed.None) extends AnimationModel(_pos, shapeIni,
+  class CircleGrow(var _pos: Pos = Pos.org, maxGrow: Double, grow: Boolean = true, shapeIni: Shape = Shapes.Circle(10), var _speed: Speed = Speed.None) extends AnimationModel(_pos, shapeIni,
 
     Group.Bullet, _speed
   ) {
-    override def _copy(pos: Pos, speed: Speed): ModelElement = new CircleGrow(pos, maxGrow,_grow, nextShape, speed)
+    override def _copy(pos: Pos, speed: Speed): ModelElement = new CircleGrow(pos, maxGrow, _grow, nextShape, speed)
+
     var _grow = grow
 
     def speed_=(speed: Speed) = {
@@ -186,7 +224,6 @@ object Model {
     }
 
     var maxFromCenter = shape.getMaxNormFromCenter
-
 
 
     override def canDie: Boolean = true
@@ -210,6 +247,8 @@ object Model {
         Shapes.Circle(s.getMaxNormFromCenter.toFloat.round - 10)
       }
     }
+
+    override def powers: Powers = NoPower
   }
 
   abstract case class AnimationModel(pos: Pos,
@@ -237,12 +276,31 @@ object Model {
 
     override def trX: Pos = pos.trY
   }
+  sealed trait ModelElement extends Pos with Colored with AnimationProp {
+    def _copy(pos: Pos, speed: Speed = Speed.None): ModelElement
 
+    def group: Int
+
+    var speed: Speed
+
+    var pos: Pos
+
+    def x: Int = pos.x
+
+    def y: Int = pos.y
+
+    def shape: Shape
+
+    def powers: Powers
+
+    override def awtColor: Color = shape.awtColor
+
+  }
   case class BaseModel(var pos: Pos,
                        shape: Shape = Shapes.None,
                        group: Int,
                        var speed: Speed = Speed.None,
-                       option: Option[AnimationProp] = None) extends ModelElement {
+                       option: Option[AnimationProp] = None,powers: Powers = NoPower) extends ModelElement {
 
 
     def trY: BaseModel = copy(pos.trY)
@@ -327,13 +385,47 @@ object Model {
 
     )
     new Model {
-      override def elements = el
+      override def elements: ListBuffer[ModelElement] = el
 
       override def player1: ModelElement = Model.player1
 
       override def player2: ModelElement = Model.player2
+
+      var _player1Power: List[UserPower] = Nil
+
+      override def player1Power: List[UserPower] = _player1Power
+
+      override def player1Power_=(p: List[UserPower]): Unit = _player1Power = p
+
+      var _player1Power2: List[UserPower] = Nil
+
+      override def player2Power: List[UserPower] = _player1Power2
+
+      override def player2Power_=(p: List[UserPower]): Unit = _player1Power2 = p
     }
   }
+  case class Ennemy(id: String, powers : Powers = NoPower)
+
+  sealed trait Powers extends Iterable[Power] {
+    def contains(power: Power):Boolean
+
+  }
+
+  case class PowersList(powersList: Seq[Power]) extends Powers {
+    override def iterator: Iterator[Power] = powersList.iterator
+
+    override def contains(power: Power): Boolean = powersList.contains(power)
+  }
+
+
+  sealed trait Power extends Powers{
+    override def iterator: Iterator[Power] = Seq(this).iterator
+
+    override def contains(power: Power): Boolean =  this == power
+  }
+  object CanShot extends Power
+  object NoPower extends Power
+
 }
 
 

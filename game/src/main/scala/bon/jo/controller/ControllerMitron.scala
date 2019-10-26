@@ -2,6 +2,7 @@ package bon.jo.controller
 
 import java.time.LocalDate
 
+
 import bon.jo.conf.{Conf, ConfDefault, SerUNerOption, SerUnserUtil}
 import bon.jo.controller.ControllerMitron._
 import bon.jo.model.Model._
@@ -15,16 +16,26 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 import scala.concurrent.ExecutionContext.Implicits._
+import scala.concurrent.Future
+import bon.jo.model.validator.Validator._
 
 object ControllerMitron {
-  implicit val game: String = "mitron_v0.1"
+  implicit val game: String = "mitron_v1.0"
   val gameText: String = "Mitron"
 }
 
+sealed trait UserPower
+
+object NovaPortable extends UserPower
+
 trait ControllerMitron extends Controller[MitronAthParam] {
 
-
   override val model: Model = Model.Test
+  val sourceIndex = 1
+  private val _client = MitronClient
+  override var view: View[_, MitronAthParam] = null
+  var maxScore: Score = Score.None.copy()
+  var _online: Boolean = false
   private var _pause = false
   private var _gameOver = false
   private var _nbJ: Int = 1
@@ -32,6 +43,19 @@ trait ControllerMitron extends Controller[MitronAthParam] {
   private var _cnt = 1
   private var _scores: Scores = Scores.empty
   private var _onlineScores: Scores = Scores.empty
+  private var _bulletCnt = Conf.nbBullet
+  private var _userName: String = ""
+  private var wantStopWithoutRegsiter: Boolean = true
+
+  def userWantNova(): Unit = {
+    if (playerHaveNova) addNova(model.player1)
+  }
+
+  def user2WantNova(): Unit = {
+    if (player2HaveNova) addNova(model.player1)
+  }
+
+  def addNova(pos: Pos) = model.elements += new CircleGrow(pos, 350)
 
   def scores = _scores
 
@@ -41,35 +65,73 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   def bestScoreListeOnline(implicit nbPlayer: Int, game: String): Seq[Score] = _onlineScores.bestScoreListe
 
-  private var _bulletCnt = Conf.nbBullet
-  private var _userName: String = ""
-  private val _client = MitronClient
+  def playerHaveNova = model.player1Power.contains(NovaPortable)
+
+  def player2HaveNova = model.player2Power.contains(NovaPortable)
 
   def userName: String = {
     _userName
-  }
-
-  def continuRegisterUserName: Boolean = {
-    if (_score.who.size == _nbJ) {
-      writeMaxScore(_score)
-      readOnlie
-      notifyViewATH
-    }
-    _score.who.size < _nbJ
   }
 
   def userName_=(str: String): Unit = {
     if (!str.isBlank) {
       _userName = str
       _score = _score.copy(who = str :: _score.who, game = game)
+      wantStopWithoutRegsiter = false
+    } else {
+      wantStopWithoutRegsiter = true
     }
   }
 
-  override var view: View[_, MitronAthParam] = null
-  var maxScore: Score = Score.None.copy()
-  val sourceIndex = 1
+  def continuRegisterUserName: Future[(Boolean, String)] = {
+    if (_score.who.size == _nbJ) {
+      writeMaxScore(_score).map(e => (!e._1, e._2))
+      // notifyViewATH
+    } else if (wantStopWithoutRegsiter) {
+      Future.successful(false, "Top score ignoré")
+    } else {
+      Future.successful(_score.who.size < _nbJ, "continu")
+    }
 
-  var _online: Boolean = false
+  }
+
+  private def writeMaxScore(scoreMax: Score): Future[(Boolean, String)] = {
+    implicit val nbJ = _nbJ
+    implicit val sb = new mutable.StringBuilder()
+    if (valid(scoreMax)) {
+      _scores.add(scoreMax)
+      _scores.reduce
+      SerUnserUtil.writeObject(_scores)
+      val ret: Future[(Boolean, String)] = if (_online && (scoreMax > _onlineScores.min || _onlineScores.size < 20)) {
+        val resp: Future[(Boolean, String)] = _client.writeScore(scoreMax).map { e =>
+          if (e == "Ok") {
+            (true, "Score send")
+          } else {
+            _score = _score.copy(who = Nil)
+            (true, "Score not send : " + e)
+          }
+
+        }
+        resp
+      } else {
+        Future.successful((false, "T'es pas dans le top 20"))
+      }
+      ret
+    } else {
+      _score = _score.copy(who = Nil)
+      Future.successful((false, sb.toString()))
+    }
+
+
+  }
+
+  override def afterLaunch(viewInit: Model => View[_, MitronAthParam]) = {
+    maxScore = readLocalAndGetMax()
+    _score = Score.None.copy(game)
+
+    connect
+    super.afterLaunch(viewInit)
+  }
 
   def connect = {
     if (_online == false) {
@@ -91,15 +153,12 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     }
   }
 
+  var _novatCnt = 0
 
-  override def afterLaunch(viewInit: Model => View[_, MitronAthParam]) = {
-    maxScore = readLocalAndGetMax()
-    _score = Score.None.copy(game)
-
-    connect
-    super.afterLaunch(viewInit)
+  def addNovaP() = {
+    _novatCnt += 1;
+    notifyViewATH
   }
-
 
   def addBullet() = {
     _bulletCnt += 1;
@@ -130,27 +189,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   }
 
-
-  def notifyViewATH = {
-    view.arhParam = MitronAthParam(_score, maxScore, _bulletCnt)
-  }
-
   def nbJ = _nbJ
-
-  def pause_=(pause: Boolean) = {
-    _pause = pause
-  }
-
-  def randomPos = Pos.random(PlateauBase.w, PlateauBase.h)
-
-  def safePos = {
-    val ret = randomPos
-    if (ret.near(model.elements(sourceIndex).pos, 150)) {
-      randomPos
-    } else {
-      ret
-    }
-  }
 
   def newGame(implicit nbJ: Short): Unit = {
     //  gameOver = false
@@ -177,48 +216,20 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   }
 
-  def pause: Boolean = _pause
-
-  def gameOver: Boolean = _gameOver
-
-  def update(e: (ModelElement, Int), elment: ListBuffer[ModelElement], p: Plateau): Unit = {
-
-    if (e._1 != PlateauBase) {
-
-      val speedX_ = if (e._1.x < 0 || e._1.x > p.w) -e._1.speed.x else e._1.speed.x
-      val speedY_ = if (e._1.y < 0 || e._1.y > p.h) -e._1.speed.y else e._1.speed.y
-      val x__ = e._1.x + speedX_
-      val y__ = e._1.y + speedY_
-      val x_ = if (x__ < 0) 0 else if (x__ > p.w) p.w else x__
-      val y_ = if (y__ < 0) 0 else if (y__ > p.h) p.h else y__
-      val speedX = if (x__ < 0 || x__ > p.w) -e._1.speed.x else e._1.speed.x
-      val speedY = if (y__ < 0 || y__ > p.h) -e._1.speed.y else e._1.speed.y
-      e._1.speed = Speed(speedX, speedY)
-      e._1.pos = BasePos(x_, y_)
-      e._1 match {
-        case BaseModel(p, Shape(ComposedShape, pa: ShapeParamMultiple), _, _, _) => {
-          pa.inner.zipWithIndex.foreach(e => update(e, pa.inner, PlateauBase))
-        }
-        case _ =>
-      }
-
-    }
-
+  def notifyViewATH = {
+    view.arhParam = MitronAthParam(_score, maxScore, _bulletCnt, _novatCnt)
   }
 
-
-  implicit val optionFileee: SerUNerOption = Conf.outFile
-
-  private def writeMaxScore(scoreMax: Score) = {
-    implicit val nbJ = _nbJ
-    _scores.add(scoreMax)
-    _scores.reduce
-    SerUnserUtil.writeObject(_scores)
-    if (_online && (scoreMax > _onlineScores.min || _onlineScores.size < 20)) {
-      val w = _client.writeScore(scoreMax)
+  def safePos = {
+    val ret = randomPos
+    if (ret.near(model.elements(sourceIndex).pos, 150)) {
+      randomPos
+    } else {
+      ret
     }
-
   }
+
+  def randomPos = Pos.random(PlateauBase.w, PlateauBase.h)
 
   def readLocalAndGetMax(): Score = {
     implicit val nbJ = _nbJ
@@ -232,6 +243,21 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   }
 
+
+  def pause: Boolean = _pause
+
+
+  implicit val optionFileee: SerUNerOption = Conf.outFile
+
+  implicit def i18n(str: String): String = str
+
+  def pause_=(pause: Boolean) = {
+    _pause = pause
+  }
+
+  def gameOver: Boolean = _gameOver
+
+
   def readOnlie(): Unit = {
 
     _client.getMaxScores.map {
@@ -244,7 +270,6 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   }
 
-
   def players = player1 :: {
     if (_nbJ == 2) {
       List(player2)
@@ -253,7 +278,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   def isGameOver = {
     val isNear = for {
-      e2 <- model.elements.filter(e => (e.group == Group.Enemy || e.group == Group.Source) && e != PlateauBase)
+      e2 <- model.elements.filter(e => (e.group == Group.Enemy || e.group == Group.Source || e.group == Group.BulletToPlayer) && e != PlateauBase)
       e1 <- players
     } yield {
       e1.pos.near(e2.pos, math.max(e1.shape.getMaxNormFromCenter, e2.shape.getMaxNormFromCenter))
@@ -271,12 +296,10 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     }
   }
 
-  def addNova(pos: Pos) = model.elements += new CircleGrow(pos, 350)
-
   def bulletProcess = {
     val tmpProcessBullet: mutable.Seq[List[Int]] = for {
       e1 <- model.elements.zipWithIndex.filter(e => (e._1.group == Group.Bullet) && e._1 != PlateauBase)
-      e2 <- model.elements.zipWithIndex.filter(e => (e._1.group == Group.Enemy) && e._1 != PlateauBase)
+      e2 <- model.elements.zipWithIndex.filter(e => (e._1.group == Group.Enemy || e._1.group == Group.BulletToPlayer) && e._1 != PlateauBase)
     } yield {
       if (e1._1.near(e2._1.pos, math.max(e1._1.shape.getMaxNormFromCenter, e2._1.shape.getMaxNormFromCenter))) {
         e1._1 match {
@@ -305,7 +328,8 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     } yield {
       if (e1._1.near(e2.pos, math.max(e1._1.shape.getMaxNormFromCenter, e2.shape.getMaxNormFromCenter))) {
         e1._1 match {
-          case e: NovaItem => addNova(e.pos)
+          case e: NovaItem if !playerHaveNova && !playerHaveNova => addNova(e.pos)
+          case e: NovaItem if playerHaveNova || playerHaveNova => addNovaP()
           case a => addBullet()
         }
         Option(e1._2)
@@ -321,22 +345,26 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     rem(elAndOoul ++ itemUser)
   }
 
+  val imageEnmmyId = List(Ennemy("enemy"), Ennemy("enemy1"), Ennemy("enemy2", CanShot))
+
   def newEnemy(pos: Pos) = {
+    val ennemyRandom = imageEnmmyId(Random.nextInt(3))
     val speed = new Speed(Random.nextInt(9) - 4, Random.nextInt(9) - 4)
     model.elements.append(
-      BaseModel(pos, shape = Shapes.Image("enemy", Direction.right, 20, 20), Group.Enemy, speed)
+      BaseModel(pos, shape = Shapes.Image(ennemyRandom.id, Direction.right, 20, 20), group = Group.Enemy, speed = speed, powers = ennemyRandom.powers)
     )
     _score += 10
     notifyViewATH
 
   }
 
+  val startScoreNovaPortable = 1500
 
   def notPauseProcess = {
 
     var source_ : Pos = null
     model.elements.zipWithIndex.map(e => {
-      update(e, model.elements, PlateauBase)
+      Controller.update(e._1, PlateauBase)
       e
     })
       .map({ e =>
@@ -351,9 +379,13 @@ trait ControllerMitron extends Controller[MitronAthParam] {
       })
     //          updateUserCoord
     //Search if enemy near user
-    isGameOver
+    if (!Conf.inv) isGameOver
     bulletProcess
 
+    if (_score.value > startScoreNovaPortable) {
+      model.player1Power = NovaPortable :: model.player1Power
+      model.player2Power = NovaPortable :: model.player2Power
+    }
     if (Conf.enemyProba.draw(_cnt)) {
       newEnemy(source_)
     }
@@ -363,6 +395,13 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     if (Conf.newNoveProba.draw(_cnt)) {
       model.elements += new NovaItem(Pos.random(PlateauBase.w, PlateauBase.h))
     }
+
+    model.elements.filter(_.powers.contains(CanShot)) foreach { e =>
+      Conf.newBulletEnnemyProba.drawAndDo(_cnt) {
+        addHomingBullet(e)
+      }
+    }
+
 
     Conf.ennemyEvoution.draw(_cnt)(Conf.enemyProba) match {
       case Some(p) => {
@@ -380,6 +419,11 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   }
 
+  def randomPlayer: ModelElement = if (_nbJ == 1) {
+    player1
+  } else if (Random.nextBoolean()) player1 else player2
+
+  def addHomingBullet(e: ModelElement)(): Unit = model.elements += new HomingBullet(e.pos, randomPlayer)
 
   def rem(indexToRemove: Iterable[Int]): Unit = for {
     i <- indexToRemove.toSet.toList.sorted.reverse
@@ -411,6 +455,5 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
 
 }
-
 
 
