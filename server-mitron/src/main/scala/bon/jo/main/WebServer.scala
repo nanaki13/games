@@ -49,29 +49,29 @@ object WebServer {
 
 
     val route: Route = concat(
-      path("html"/ "xyzrtaez") {
-        get {
-          {
-            extractRequest {
-              req =>
-                println(req.headers)
-                req.entity match {
-                  case _: HttpEntity.Strict =>
-
-                    val htmlREsp =  HttpResponse(entity = HttpEntity(HtmlTemplateSys.template.toHTMLString).withContentType(ContentTypes.`text/html(UTF-8)`))
-                    complete {
-                      htmlREsp
-                    }
-                  case _ =>
-                    complete("Ooops, request entity is not strict!")
-                }
-
-            }
-
-            //   complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to akka-http</h1>"))
-          }
-        }
-      },
+//      path("html"/ "xyzrtaez") {
+//        get {
+//          {
+//            extractRequest {
+//              req =>
+//                println(req.headers)
+//                req.entity match {
+//                  case _: HttpEntity.Strict =>
+//
+//                    val htmlREsp =  HttpResponse(entity = HttpEntity(HtmlTemplateSys.template.toHTMLString).withContentType(ContentTypes.`text/html(UTF-8)`))
+//                    complete {
+//                      htmlREsp
+//                    }
+//                  case _ =>
+//                    complete("Ooops, request entity is not strict!")
+//                }
+//
+//            }
+//
+//            //   complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to akka-http</h1>"))
+//          }
+//        }
+//      },
       path("html"/ "scores") {
         get {
           {
