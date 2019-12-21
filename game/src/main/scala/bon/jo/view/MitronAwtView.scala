@@ -13,6 +13,7 @@ import bon.jo.model.Shapes.DirAndIdParam
 import bon.jo.model.{MitronAthParam, Model, Score}
 import javax.swing.{JButton, JMenuItem, JPanel}
 
+import scala.collection.mutable
 import scala.concurrent.Future
 import scala.util.Random
 import scala.concurrent.ExecutionContext.Implicits._
@@ -79,7 +80,7 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     //    frame.setResizable(false)
   }
 
-  val refreshOnline = new TimedExecution("refresh online",( 1000d/Conf.deltaTAnim.toDouble ).round.toInt, controller.readOnlie)
+  val refreshOnline = new TimedExecution("refresh online", (1000d / Conf.deltaTAnim.toDouble).round.toInt, controller.readOnlie)
 
 
   def arhParam_=(arhParam: MitronAthParam) = {
@@ -156,7 +157,7 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     }
     val img = pa.x match {
       case "bullet" => bullet
-      case "ennemyBullet" =>   ennemyBullet
+      case "ennemyBullet" => ennemyBullet
       case "enemy" => ennemi
       case "enemy1" => ennemi1
       case "enemy2" => ennemi2
@@ -367,12 +368,45 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
     g2.drawString(s"\nscore : ${_athParam.score.value}", 10, 15)
     g2.drawString(s"\nrecord : ${_athParam.maxScore.value}     ${if (_athParam.maxScore != Score.None) s"[${_athParam.maxScore.who.mkString(" & ")}]" else ""}", 10, 15 + fonteMini.getSize + 2)
     g2.drawString(s"\nbullet : ${_athParam.nbBullet}", 10, 15 + (fonteMini.getSize + 2) * 2)
-    if(controller.playerHaveNova){
+    if (controller.playersHaveNova) {
       g2.drawString(s"\nnova portable : ${_athParam.novaPoetable}", 10, 15 + (fonteMini.getSize + 2) * 3)
+    }
+
+    if (currentMessage.nonEmpty && currentMessage.get.isFinish) {
+      currentMessage = None
+    }
+    if (currentMessage.isEmpty && messageQue.nonEmpty) {
+      currentMessage = Some(TimedMessage(messageQue.dequeue(), Seconde(5)))
+    } else if (currentMessage.nonEmpty && messageQue.nonEmpty) {
+      println("conbine message")
+      currentMessage = Some(TimedMessage(currentMessage.get.string +"\n" +messageQue.dequeue(), Seconde(5)))
+    }
+    if (currentMessage.nonEmpty) {
+   //   println(currentMessage.get.isFinish)
+      val message = currentMessage.get.string.split("\n").zipWithIndex.foreach(m=>{
+        g2.drawString(m._1, PlateauBase.w / 2, (PlateauBase.h / 2)+ (fonteMini.getSize + 2) * m._2)
+      })
+
     }
 
   }
 
+  def nowMilli: Long = {
+    System.currentTimeMillis()
+  }
+
+  val messageQue = mutable.Queue[String]()
+  var currentMessage: Option[TimedMessage] = None
+
+  case class Seconde(seconde: Int)
+
+  case class TimedMessage(string: String, seconde: Seconde) {
+    val creation = nowMilli
+
+    def isFinish: Boolean = {
+      nowMilli - creation > seconde.seconde * 1000
+    }
+  }
 
   override def gameOver(implicit g2: Graphics2D, offX: Pos): Unit = {
     // g2.clearRect(0, 0, PlateauBase.w, PlateauBase.h)
@@ -385,6 +419,12 @@ class MitronAwtView(val elmts: Model, val controller: ControllerMitron) extends 
   }
 
 
+  override def userInGameMessage(description: String): Unit = {
+    Future {
+      println(description)
+      messageQue.enqueue(description)
+    }
+  }
 }
 
 

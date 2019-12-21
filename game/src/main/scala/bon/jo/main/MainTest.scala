@@ -90,7 +90,7 @@ object MainTest{
 
     override var zoom: Double = _
 
-
+    override def userInGameMessage(description: String): Unit = ???
   }
 
   val start = System.currentTimeMillis()

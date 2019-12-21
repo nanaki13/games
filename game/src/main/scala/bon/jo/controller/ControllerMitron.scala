@@ -24,9 +24,17 @@ object ControllerMitron {
   val gameText: String = "Mitron"
 }
 
-sealed trait UserPower
+sealed trait UserPower {
+  def description: String
+}
 
-object NovaPortable extends UserPower
+case class UserPowerImpl(description: String) extends UserPower
+
+object NovaPortable extends UserPowerImpl("You can stock the Nova and they follow you") with UserPower
+
+object BulletSolid extends UserPowerImpl("Your bullet don't die when it hit an enemy") with UserPower
+
+object ImmoratalBullet extends UserPowerImpl("Your bullet don't die with time") with UserPower
 
 trait ControllerMitron extends Controller[MitronAthParam] {
 
@@ -48,26 +56,34 @@ trait ControllerMitron extends Controller[MitronAthParam] {
   private var wantStopWithoutRegsiter: Boolean = true
 
   def userWantNova(): Unit = {
-    if (playerHaveNova) addNova(model.player1)
+    if (playersHaveNova) addNova(model.player1)
   }
 
   def user2WantNova(): Unit = {
-    if (player2HaveNova) addNova(model.player1)
+    if (player2HaveNova) addNova(model.player2)
   }
 
-  def addNova(pos: Pos) = model.elements += new CircleGrow(pos, 350)
+  def addNova(pos: Pos): ListBuffer[ModelElement] = model.elements += new CircleGrow(pos, 350)
 
-  def scores = _scores
+  def scores: Scores = _scores
 
-  def onlineScores = _onlineScores
+  def onlineScores: Scores = _onlineScores
 
   def bestScoreListeLocal(implicit nbPlayer: Int, game: String): Seq[Score] = _scores.bestScoreListe
 
   def bestScoreListeOnline(implicit nbPlayer: Int, game: String): Seq[Score] = _onlineScores.bestScoreListe
 
-  def playerHaveNova = model.player1Power.contains(NovaPortable)
+  def playersHaveNova: Boolean = player1HaveNova || player2HaveNova
 
-  def player2HaveNova = model.player2Power.contains(NovaPortable)
+  def playersHaveBulletSolid: Boolean = player1HaveBulletSolid || player2HaveBulletSolid
+
+  def player1HaveNova: Boolean = model.player1Power.contains(NovaPortable)
+
+  def player1HaveBulletSolid: Boolean = model.player1Power.contains(BulletSolid)
+
+  def player2HaveNova: Boolean = model.player2Power.contains(NovaPortable)
+
+  def player2HaveBulletSolid: Boolean = model.player2Power.contains(BulletSolid)
 
   def userName: String = {
     _userName
@@ -125,7 +141,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   }
 
-  override def afterLaunch(viewInit: Model => View[_, MitronAthParam]) = {
+  override def afterLaunch(viewInit: Model => View[_, MitronAthParam]): Unit = {
     maxScore = readLocalAndGetMax()
     _score = Score.None.copy(game)
 
@@ -134,7 +150,7 @@ trait ControllerMitron extends Controller[MitronAthParam] {
   }
 
   def connect = {
-    if (_online == false) {
+    if (!_online) {
       try {
 
         _client.getMaxScores.map {
@@ -199,6 +215,8 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     val el = ListBuffer(model.elements(0), model.elements(1)._copy(pos = BasePos(200, y = 200), speed = Speed(3, 2)), player1) ++ jList
     player1.pos = safePos
     player2.pos = safePos
+    model.player1Power  = Set.empty
+    model.player2Power  = Set.empty
     model.elements.clear()
     model.elements.addAll(el)
     view.newGame
@@ -298,16 +316,18 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   def bulletProcess = {
     val tmpProcessBullet: mutable.Seq[List[Int]] = for {
-      e1 <- model.elements.zipWithIndex.filter(e => (e._1.group == Group.Bullet) && e._1 != PlateauBase)
-      e2 <- model.elements.zipWithIndex.filter(e => (e._1.group == Group.Enemy || e._1.group == Group.BulletToPlayer) && e._1 != PlateauBase)
+      bulletCurrent <- model.elements.zipWithIndex.filter(e => (e._1.group == Group.Bullet) && e._1 != PlateauBase)
+      ennemyCurrent <- model.elements.zipWithIndex.filter(e => (e._1.group == Group.Enemy || e._1.group == Group.BulletToPlayer) && e._1 != PlateauBase)
     } yield {
-      if (e1._1.near(e2._1.pos, math.max(e1._1.shape.getMaxNormFromCenter, e2._1.shape.getMaxNormFromCenter))) {
-        e1._1 match {
+      if (bulletCurrent._1.near(ennemyCurrent._1.pos, math.max(bulletCurrent._1.shape.getMaxNormFromCenter, ennemyCurrent._1.shape.getMaxNormFromCenter))) {
+        bulletCurrent._1 match {
           case _: CircleGrow => {
-            List(e2._2)
+            List(ennemyCurrent._2)
           }
           case e => {
-            List(e1._2, e2._2)
+
+            if (playersHaveBulletSolid) ennemyCurrent._2 :: Nil
+            else bulletCurrent._2 :: ennemyCurrent._2 :: Nil
           }
         }
       } else {
@@ -328,8 +348,8 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     } yield {
       if (e1._1.near(e2.pos, math.max(e1._1.shape.getMaxNormFromCenter, e2.shape.getMaxNormFromCenter))) {
         e1._1 match {
-          case e: NovaItem if !playerHaveNova && !playerHaveNova => addNova(e.pos)
-          case e: NovaItem if playerHaveNova || playerHaveNova => addNovaP()
+          case e: NovaItem if !playersHaveNova && !playersHaveNova => addNova(e.pos)
+          case e: NovaItem if playersHaveNova || playersHaveNova => addNovaP()
           case a => addBullet()
         }
         Option(e1._2)
@@ -358,7 +378,8 @@ trait ControllerMitron extends Controller[MitronAthParam] {
 
   }
 
-  val startScoreNovaPortable = 1500
+  val startScoreNovaPortable = 20
+  val startScoreBulletSolid = 40
 
   def notPauseProcess = {
 
@@ -382,9 +403,16 @@ trait ControllerMitron extends Controller[MitronAthParam] {
     if (!Conf.inv) isGameOver
     bulletProcess
 
-    if (_score.value > startScoreNovaPortable) {
-      model.player1Power = NovaPortable :: model.player1Power
-      model.player2Power = NovaPortable :: model.player2Power
+    if (!playersHaveNova && _score.value > startScoreNovaPortable) {
+      model.player1Power += NovaPortable
+      model.player2Power += NovaPortable
+      view.userInGameMessage(NovaPortable.description)
+    }
+    println(!playersHaveBulletSolid && _score.value > startScoreBulletSolid)
+    if (!playersHaveBulletSolid && _score.value > startScoreBulletSolid) {
+      model.player1Power += BulletSolid
+      model.player2Power += BulletSolid
+      view.userInGameMessage(BulletSolid.description)
     }
     if (Conf.enemyProba.draw(_cnt)) {
       newEnemy(source_)

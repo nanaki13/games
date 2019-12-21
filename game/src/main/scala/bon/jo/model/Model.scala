@@ -18,8 +18,8 @@ trait Model {
 
   def player2: ModelElement
 
-  var player1Power: List[UserPower]
-  var player2Power: List[UserPower]
+  var player1Power: Set[UserPower]
+  var player2Power: Set[UserPower]
 }
 
 object Model {
@@ -33,7 +33,6 @@ object Model {
     val delta: Pos = pos - follower
     val deltaNoramlize: Pos = Pos.normalize(4, delta)
     val ret = follower + deltaNoramlize
-    for(_ <- 1 to 5) println()
     ret
   }
 
@@ -42,7 +41,6 @@ object Model {
     , shape = Shapes.Image("ennemyBullet", Direction.right, 30, 30),
     speed = Speed.None,
     group = Group.BulletToPlayer, option = option) with SelfControl {
-    println("new missile")
     private var _cnt = 0;
 
     override def _copy(posToCopy: Pos, speed_ : Speed): ModelElement = ???
@@ -391,17 +389,17 @@ object Model {
 
       override def player2: ModelElement = Model.player2
 
-      var _player1Power: List[UserPower] = Nil
+      var _player1Power: Set[UserPower] = Set.empty
 
-      override def player1Power: List[UserPower] = _player1Power
+      override def player1Power: Set[UserPower] = _player1Power
 
-      override def player1Power_=(p: List[UserPower]): Unit = _player1Power = p
+      override def player1Power_=(p: Set[UserPower]): Unit = _player1Power = p
 
-      var _player1Power2: List[UserPower] = Nil
+      var _player1Power2: Set[UserPower] = Set.empty
 
-      override def player2Power: List[UserPower] = _player1Power2
+      override def player2Power: Set[UserPower] = _player1Power2
 
-      override def player2Power_=(p: List[UserPower]): Unit = _player1Power2 = p
+      override def player2Power_=(p: Set[UserPower]): Unit = _player1Power2 = p
     }
   }
   case class Ennemy(id: String, powers : Powers = NoPower)

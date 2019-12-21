@@ -5,6 +5,7 @@ import bon.jo.model.AthParam
 import bon.jo.model.Model.{ModelElement, Pos, Refreh}
 
 trait View[G,AthParam_ <: AthParam] extends Refreh {
+  def userInGameMessage(description: String):Unit
 
 
   def getLoserUserName: Unit
